@@ -1,0 +1,25 @@
+import type { Character } from "../types.js";
+
+export const CHARACTERS: readonly Character[] = [
+  { id: "ai-mi", name: "Ai.Mi", icon: "/assets/characters/Ai.Mi.png" },
+  { id: "asher", name: "Asher", icon: "/assets/characters/Asher.png" },
+  { id: "atlas", name: "Atlas", icon: "/assets/characters/Atlas.png" },
+  { id: "drekar", name: "Drek'ar", icon: "/assets/characters/Drek'ar.png" },
+  { id: "dubu", name: "Dubu", icon: "/assets/characters/Dubu.png" },
+  { id: "era", name: "Era", icon: "/assets/characters/Era.png" },
+  { id: "estelle", name: "Estelle", icon: "/assets/characters/Estelle.png" },
+  { id: "finii", name: "Finii", icon: "/assets/characters/Finii.png" },
+  { id: "juliette", name: "Juliette", icon: "/assets/characters/Juliette.png" },
+  { id: "juno", name: "Juno", icon: "/assets/characters/Juno.png" },
+  { id: "kai", name: "Kai", icon: "/assets/characters/Kai.png" },
+  { id: "kazan", name: "Kazan", icon: "/assets/characters/Kazan.png" },
+  { id: "luna", name: "Luna", icon: "/assets/characters/Luna.png" },
+  { id: "mako", name: "Mako", icon: "/assets/characters/Mako.png" },
+  { id: "nao", name: "Nao", icon: "/assets/characters/Nao.png" },
+  { id: "octavia", name: "Octavia", icon: "/assets/characters/Octavia.png" },
+  { id: "rasmus", name: "Rasmus", icon: "/assets/characters/Rasmus.png" },
+  { id: "rune", name: "Rune", icon: "/assets/characters/Rune.png" },
+  { id: "vyce", name: "Vyce", icon: "/assets/characters/Vyce.png" },
+  { id: "x", name: "X", icon: "/assets/characters/X.png" },
+  { id: "zentaro", name: "Zentaro", icon: "/assets/characters/Zentaro.png" },
+] as const;

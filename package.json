@@ -5,7 +5,8 @@
     "predev": "pnpm --filter @os-drafter/shared build",
     "dev": "concurrently -n shared,client,server -c magenta,blue,green \"pnpm --filter @os-drafter/shared dev\" \"pnpm --filter @os-drafter/client dev\" \"pnpm --filter @os-drafter/server dev\"",
     "build": "pnpm --filter @os-drafter/shared build && pnpm --filter @os-drafter/client build && pnpm --filter @os-drafter/server build",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "test": "pnpm --filter @os-drafter/shared test"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
