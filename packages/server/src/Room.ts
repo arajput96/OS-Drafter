@@ -165,6 +165,12 @@ export class Room {
               this.startTimer(io);
             }
           }
+        } else {
+          // TODO: Surface expireTimer failures to clients. This can happen if
+          // no valid options remain (e.g., all characters banned/picked). Consider
+          // emitting an error event and gracefully ending the draft.
+          this.stopTimer();
+          io.to(this.roomId).emit("error", result.error);
         }
       },
     });

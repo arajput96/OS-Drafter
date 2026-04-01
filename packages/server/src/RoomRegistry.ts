@@ -1,12 +1,22 @@
 import { Room } from "./Room.js";
 import type { DraftConfig } from "@os-drafter/shared";
 
-/** In-memory room storage. Rooms are ephemeral (no database for MVP). */
+/**
+ * In-memory room storage. Rooms are ephemeral (no database for MVP).
+ *
+ * TODO: Add TTL-based eviction (createdAt + periodic sweep) and a max room
+ * limit or rate limiting on creation to prevent memory leaks from abandoned
+ * rooms and DoS via mass room creation.
+ */
 class RoomRegistry {
   private rooms = new Map<string, Room>();
 
   create(config: DraftConfig): Room {
-    const roomId = crypto.randomUUID().slice(0, 8);
+    let roomId: string;
+    do {
+      roomId = crypto.randomUUID().slice(0, 8);
+    } while (this.rooms.has(roomId));
+
     const room = new Room(roomId, config);
     this.rooms.set(roomId, room);
     return room;

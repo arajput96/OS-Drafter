@@ -7,7 +7,12 @@ export function registerDraftHandlers(io: TypedServer, socket: TypedSocket): voi
   socket.on("draft:start", () => {
     const ctx = getContext(socket);
     if (!ctx) return;
-    const { room } = ctx;
+    const { room, role } = ctx;
+
+    if (role !== "blue" && role !== "red") {
+      socket.emit("error", "Only team members can start the draft");
+      return;
+    }
 
     if (!room.isBlueConnected() || !room.isRedConnected()) {
       socket.emit("error", "Both teams must be connected to start the draft");

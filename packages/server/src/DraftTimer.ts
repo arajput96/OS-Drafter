@@ -8,17 +8,20 @@ export interface DraftTimerCallbacks {
  * Ticks every second and calls onExpire when it reaches 0.
  */
 export class DraftTimer {
+  private readonly initialSeconds: number;
   private remaining: number;
   private interval: ReturnType<typeof setInterval> | null = null;
   private callbacks: DraftTimerCallbacks;
 
   constructor(seconds: number, callbacks: DraftTimerCallbacks) {
-    this.remaining = seconds;
+    this.initialSeconds = Math.max(1, seconds);
+    this.remaining = this.initialSeconds;
     this.callbacks = callbacks;
   }
 
   start(): void {
     this.stop();
+    this.remaining = this.initialSeconds;
 
     this.interval = setInterval(() => {
       this.remaining--;

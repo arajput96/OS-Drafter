@@ -1,9 +1,17 @@
 import type { RoomRole } from "@os-drafter/shared";
 import type { TypedServer, TypedSocket } from "../types.js";
 import { registry } from "../RoomRegistry.js";
+import { validateDraftConfig } from "../validation.js";
+import type { Room } from "../Room.js";
 
 export function registerRoomHandlers(io: TypedServer, socket: TypedSocket): void {
   socket.on("room:create", (config, callback) => {
+    const error = validateDraftConfig(config);
+    if (error) {
+      socket.emit("error", error);
+      return;
+    }
+
     const room = registry.create(config);
 
     // Auto-join the creator as blue
@@ -83,10 +91,7 @@ function leaveCurrentRoom(io: TypedServer, socket: TypedSocket): void {
   room.broadcastRoomState(io);
 }
 
-function getDraftViewForRole(
-  room: ReturnType<typeof registry.get> & {},
-  role: RoomRole,
-) {
+function getDraftViewForRole(room: Room, role: RoomRole) {
   if (role === "blue") return room.getTeamDraftView("blue");
   if (role === "red") return room.getTeamDraftView("red");
   return room.getSpectatorDraftView();

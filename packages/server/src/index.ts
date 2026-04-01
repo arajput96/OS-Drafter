@@ -22,8 +22,13 @@ fastify.get("/health", async () => {
 registerRoomRoutes(fastify, CLIENT_ORIGIN);
 
 // Start server, then attach Socket.IO
-await fastify.listen({ port: SERVER_PORT, host: "0.0.0.0" });
-fastify.log.info(`${APP_NAME} server running on port ${SERVER_PORT}`);
+try {
+  await fastify.listen({ port: SERVER_PORT, host: "0.0.0.0" });
+  fastify.log.info(`${APP_NAME} server running on port ${SERVER_PORT}`);
 
-// Socket.IO attaches to the underlying http.Server
-createSocketServer(fastify.server, CLIENT_ORIGIN);
+  // Socket.IO attaches to the underlying http.Server
+  createSocketServer(fastify.server, CLIENT_ORIGIN);
+} catch (err) {
+  fastify.log.error(err, "Failed to start server");
+  process.exit(1);
+}
