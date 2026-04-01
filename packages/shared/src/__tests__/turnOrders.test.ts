@@ -108,5 +108,12 @@ describe("generateTurnOrder", () => {
       const phases = [...new Set(steps.map((s) => s.phase))];
       expect(phases).toEqual(["MAP_BAN", "AWAKENING_REVEAL", "CHAR_PICK"]);
     });
+
+    it("skips AWAKENING_REVEAL when includeAwakenings is false", () => {
+      const steps = generateTurnOrder(makeConfig(), { includeAwakenings: false });
+      const phases = [...new Set(steps.map((s) => s.phase))];
+      expect(phases).not.toContain("AWAKENING_REVEAL");
+      expect(phases).toEqual(["MAP_BAN", "CHAR_BAN", "CHAR_PICK"]);
+    });
   });
 });

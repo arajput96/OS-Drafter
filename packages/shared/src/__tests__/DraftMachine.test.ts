@@ -209,9 +209,33 @@ describe("DraftMachine", () => {
       expect(result.ok).toBe(false);
     });
 
+    it("gives red the other awakening if red picks the same as blue", () => {
+      const revealed = machine.getState().awakeningReveal.revealedPair!;
+      machine.pickAwakening("blue", revealed[0]);
+      // Red tries to pick the same one blue chose
+      const result = machine.pickAwakening("red", revealed[0]);
+      expect(result.ok).toBe(true);
+      // Red should get the alternative
+      expect(machine.getState().awakeningReveal.redChoice).toBe(revealed[1]);
+    });
+
     it("transitions to CHAR_BAN after both teams pick", () => {
       completeAwakenings(machine);
       expect(machine.getState().phase).toBe("CHAR_BAN");
+    });
+  });
+
+  describe("no awakenings", () => {
+    it("skips AWAKENING_REVEAL when no awakenings provided", () => {
+      const machine = new DraftMachine(
+        makeConfig({ numMapBans: 0, banMode: "none" }),
+        CHARS,
+        MAP_IDS,
+        [], // no awakenings
+      );
+      machine.start();
+      // Should skip straight to CHAR_PICK
+      expect(machine.getState().phase).toBe("CHAR_PICK");
     });
   });
 
@@ -288,6 +312,12 @@ describe("DraftMachine", () => {
       it("rejects duplicate submission from same team", () => {
         machine.banCharacter("blue", "c1");
         const result = machine.banCharacter("blue", "c2");
+        expect(result.ok).toBe(false);
+      });
+
+      it("rejects banning the same character the opponent has pending", () => {
+        machine.banCharacter("blue", "c1");
+        const result = machine.banCharacter("red", "c1");
         expect(result.ok).toBe(false);
       });
     });

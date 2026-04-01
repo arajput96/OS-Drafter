@@ -18,6 +18,7 @@ export class DraftMachine {
   private characterIds: string[];
   private mapIds: string[];
   private awakeningIds: string[];
+  private hasAwakenings: boolean;
 
   constructor(
     config: DraftConfig,
@@ -28,8 +29,11 @@ export class DraftMachine {
     this.characterIds = [...characterIds];
     this.mapIds = [...mapIds];
     this.awakeningIds = [...awakeningIds];
+    this.hasAwakenings = awakeningIds.length >= 2;
 
-    const turnOrder = generateTurnOrder(config);
+    const turnOrder = generateTurnOrder(config, {
+      includeAwakenings: this.hasAwakenings,
+    });
 
     const mapBans: MapBanState = {
       mapPool: [...mapIds],
@@ -82,14 +86,28 @@ export class DraftMachine {
     const { blueTeamBans, redTeamBans, blueTeamPicks, redTeamPicks, config } = this.state;
     const allBans = [...blueTeamBans, ...redTeamBans].filter(Boolean) as string[];
 
+    // Also exclude pending bans/picks from the opponent in simultaneous mode
+    const pendingValues: string[] = [];
+    if (this.state.pendingActions) {
+      const opponent: Team = team === "blue" ? "red" : "blue";
+      if (this.state.pendingActions[opponent]) {
+        pendingValues.push(this.state.pendingActions[opponent]);
+      }
+    }
+
     return this.characterIds.filter((id) => {
       // Banned characters are always unavailable
       if (allBans.includes(id)) return false;
+
+      // Pending bans from opponent are also unavailable
+      if (pendingValues.includes(id) && this.state.phase === "CHAR_BAN") return false;
 
       if (config.mirrorRule === "no_mirrors") {
         // Cannot pick any character already picked by either team
         const allPicks = [...blueTeamPicks, ...redTeamPicks].filter(Boolean) as string[];
         if (allPicks.includes(id)) return false;
+        // Also exclude opponent's pending pick
+        if (pendingValues.includes(id) && this.state.phase === "CHAR_PICK") return false;
       } else if (config.mirrorRule === "team_mirrors") {
         // Cannot pick a character already picked by your own team
         const teamPicks = (team === "blue" ? blueTeamPicks : redTeamPicks).filter(Boolean) as string[];
@@ -131,8 +149,8 @@ export class DraftMachine {
       return { ok: false, error: "Draft has already started" };
     }
 
-    // Reveal a random awakening pair
-    if (this.awakeningIds.length >= 2) {
+    // Reveal a random awakening pair (only if awakenings are available)
+    if (this.hasAwakenings) {
       const shuffled = [...this.awakeningIds].sort(() => Math.random() - 0.5);
       this.state.awakeningReveal.revealedPair = [shuffled[0]!, shuffled[1]!];
     }
@@ -180,8 +198,16 @@ export class DraftMachine {
       this.state.awakeningReveal.blueChoice = awakeningId;
     } else {
       if (redChoice !== null) return { ok: false, error: "Red has already chosen an awakening" };
-      // If blue already chose this one and there's only 2 options, red gets the other
-      this.state.awakeningReveal.redChoice = awakeningId;
+      // If blue already chose this one, red gets the other
+      if (blueChoice === awakeningId) {
+        const alternative = revealedPair.find((id) => id !== blueChoice);
+        if (!alternative) {
+          return { ok: false, error: "No alternative awakening available" };
+        }
+        this.state.awakeningReveal.redChoice = alternative;
+      } else {
+        this.state.awakeningReveal.redChoice = awakeningId;
+      }
     }
 
     this.advance();
@@ -200,6 +226,14 @@ export class DraftMachine {
     const allBans = [...this.state.blueTeamBans, ...this.state.redTeamBans].filter(Boolean) as string[];
     if (allBans.includes(characterId)) {
       return { ok: false, error: `Character "${characterId}" is already banned` };
+    }
+
+    // In simultaneous mode, also check if the opponent has this as a pending ban
+    if (step!.team === "both" && this.state.pendingActions) {
+      const opponent: Team = team === "blue" ? "red" : "blue";
+      if (this.state.pendingActions[opponent] === characterId) {
+        return { ok: false, error: `Character "${characterId}" is already being banned by the other team` };
+      }
     }
 
     // Handle simultaneous bans
@@ -264,6 +298,10 @@ export class DraftMachine {
       if (pending.red === null) {
         const randomId = this.randomSelection("red", step.type);
         if (randomId) pending.red = randomId;
+      }
+      // If we still don't have valid selections for both teams, fail gracefully
+      if (pending.blue === null || pending.red === null) {
+        return { ok: false, error: "No valid options available for simultaneous selection" };
       }
       // Commit both (simultaneous only applies to ban/pick steps)
       return this.commitSimultaneous(step.type as "ban" | "pick");
@@ -347,9 +385,6 @@ export class DraftMachine {
       this.state.blueTeamBans.push(blueId);
       this.state.redTeamBans.push(redId);
     } else {
-      // For picks with no_mirrors, if both teams picked the same character,
-      // this is a conflict. In competitive play, simultaneous + no_mirrors
-      // means both picks stand (the reveal happens at the same time).
       this.state.blueTeamPicks.push(blueId);
       this.state.redTeamPicks.push(redId);
     }
@@ -423,7 +458,17 @@ export class DraftMachine {
       }
       case "ban": {
         const allBans = [...this.state.blueTeamBans, ...this.state.redTeamBans].filter(Boolean) as string[];
-        pool = this.characterIds.filter((id) => !allBans.includes(id));
+        // Also exclude pending bans from the other team
+        const pendingBans: string[] = [];
+        if (this.state.pendingActions) {
+          const opponent: Team = team === "blue" ? "red" : "blue";
+          if (this.state.pendingActions[opponent]) {
+            pendingBans.push(this.state.pendingActions[opponent]);
+          }
+        }
+        pool = this.characterIds.filter(
+          (id) => !allBans.includes(id) && !pendingBans.includes(id),
+        );
         break;
       }
       case "pick":

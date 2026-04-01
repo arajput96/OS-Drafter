@@ -46,12 +46,25 @@ export interface DraftConfig {
   numMapBans: number;
 }
 
-export interface DraftAction {
-  type: "map_ban" | "awakening_pick" | "ban" | "pick";
-  team: Team;
-  characterId: string;
-  index: number;
-}
+export type DraftAction =
+  | {
+      type: "map_ban";
+      team: Team;
+      mapId: string;
+      index: number;
+    }
+  | {
+      type: "awakening_pick";
+      team: Team;
+      awakeningId: string;
+      index: number;
+    }
+  | {
+      type: "ban" | "pick";
+      team: Team;
+      characterId: string;
+      index: number;
+    };
 
 export interface DraftSlot {
   team: Team;

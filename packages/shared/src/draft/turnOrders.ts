@@ -6,7 +6,11 @@ import type { DraftConfig, Team, TurnStep } from "../types.js";
  *
  * Flow: MAP_BAN → AWAKENING_REVEAL → CHAR_BAN → CHAR_PICK
  */
-export function generateTurnOrder(config: DraftConfig): TurnStep[] {
+export function generateTurnOrder(
+  config: DraftConfig,
+  options: { includeAwakenings?: boolean } = {},
+): TurnStep[] {
+  const { includeAwakenings = true } = options;
   const steps: TurnStep[] = [];
 
   // ── Map Ban Phase (always alternating, blue first) ──
@@ -21,18 +25,20 @@ export function generateTurnOrder(config: DraftConfig): TurnStep[] {
   }
 
   // ── Awakening Reveal Phase (blue picks first, then red) ──
-  steps.push({
-    phase: "AWAKENING_REVEAL",
-    team: "blue",
-    type: "awakening_pick",
-    index: 0,
-  });
-  steps.push({
-    phase: "AWAKENING_REVEAL",
-    team: "red",
-    type: "awakening_pick",
-    index: 1,
-  });
+  if (includeAwakenings) {
+    steps.push({
+      phase: "AWAKENING_REVEAL",
+      team: "blue",
+      type: "awakening_pick",
+      index: 0,
+    });
+    steps.push({
+      phase: "AWAKENING_REVEAL",
+      team: "red",
+      type: "awakening_pick",
+      index: 1,
+    });
+  }
 
   // ── Character Ban Phase ──
   if (config.banMode !== "none") {
