@@ -9,13 +9,14 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@fastify/cors": "^11.0.1",
     "@os-drafter/shared": "workspace:*",
     "fastify": "^5.2.1",
-    "@fastify/cors": "^11.0.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "socket.io-client": "^4.8.3",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3"
   }
