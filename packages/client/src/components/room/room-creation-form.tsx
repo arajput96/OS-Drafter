@@ -183,7 +183,13 @@ function NumberField({
         value={value}
         min={min}
         max={max}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") return;
+          const parsed = Number(raw);
+          if (Number.isNaN(parsed)) return;
+          onChange(Math.min(Math.max(parsed, min), max));
+        }}
         className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
       />
     </div>
@@ -219,9 +225,13 @@ function RoomLink({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: ignore silently — link is visible and can be copied manually
+    }
   };
 
   return (
@@ -236,6 +246,7 @@ function RoomLink({
         </a>
         <button
           onClick={handleCopy}
+          aria-label={copied ? `${label} link copied` : `Copy ${label} link`}
           className="shrink-0 rounded p-1.5 hover:bg-secondary transition-colors"
         >
           {copied ? (

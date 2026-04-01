@@ -1,7 +1,8 @@
 import type { DraftConfig, RoomState } from "@os-drafter/shared";
 import { SERVER_PORT } from "@os-drafter/shared";
 
-const API_BASE = `http://localhost:${SERVER_PORT}`;
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE || `http://localhost:${SERVER_PORT}`;
 
 export interface CreateRoomResponse {
   roomId: string;

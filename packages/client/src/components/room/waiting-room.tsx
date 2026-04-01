@@ -103,9 +103,13 @@ function CopyLink({ label, url }: { label: string; url: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: ignore silently — link is visible and can be copied manually
+    }
   };
 
   return (
@@ -118,6 +122,7 @@ function CopyLink({ label, url }: { label: string; url: string }) {
       </code>
       <button
         onClick={handleCopy}
+        aria-label={copied ? `${label} link copied` : `Copy ${label} link`}
         className="shrink-0 rounded p-1 hover:bg-secondary transition-colors"
       >
         {copied ? (

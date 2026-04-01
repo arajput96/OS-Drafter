@@ -9,13 +9,8 @@ interface DraftCompleteProps {
 }
 
 export function DraftComplete({ draft }: DraftCompleteProps) {
-  // Determine the selected map (the one NOT banned)
-  const remaining = draft.mapBans.mapPool.filter(
-    (id) =>
-      !draft.mapBans.blueBans.includes(id) &&
-      !draft.mapBans.redBans.includes(id),
-  );
-  const selectedMap = remaining.length > 0 ? mapMap.get(remaining[0]) : null;
+  const selectedMapId = draft.mapBans.selectedMap;
+  const selectedMap = selectedMapId ? mapMap.get(selectedMapId) ?? null : null;
 
   return (
     <div className="flex flex-col items-center gap-6">

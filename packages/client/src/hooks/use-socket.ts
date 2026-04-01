@@ -14,13 +14,13 @@ type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 export function useSocket(roomId: string, role: RoomRole) {
   const socketRef = useRef<TypedSocket | null>(null);
-  const { setConnected, setRole, setRoom, setDraft, setTimer, setError, reset } =
-    useDraftStore();
-
   useEffect(() => {
-    setRole(role);
+    useDraftStore.getState().setRole(role);
 
-    const socket: TypedSocket = io(`http://localhost:${SERVER_PORT}`, {
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_IO_URL || `http://localhost:${SERVER_PORT}`;
+
+    const socket: TypedSocket = io(socketUrl, {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 10,
@@ -29,33 +29,33 @@ export function useSocket(roomId: string, role: RoomRole) {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      setConnected(true);
+      useDraftStore.getState().setConnected(true);
       socket.emit("room:join", roomId, role);
     });
 
     socket.on("disconnect", () => {
-      setConnected(false);
+      useDraftStore.getState().setConnected(false);
     });
 
     socket.on("room:state", (state) => {
-      setRoom(state);
+      useDraftStore.getState().setRoom(state);
     });
 
     socket.on("draft:state", (state) => {
-      setDraft(state);
+      useDraftStore.getState().setDraft(state);
     });
 
     socket.on("draft:timer", (remaining) => {
-      setTimer(remaining);
+      useDraftStore.getState().setTimer(remaining);
     });
 
     socket.on("error", (message) => {
-      setError(message);
+      useDraftStore.getState().setError(message);
     });
 
     return () => {
       socket.disconnect();
-      reset();
+      useDraftStore.getState().reset();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, role]);

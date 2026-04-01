@@ -1,4 +1,4 @@
-import type { Team, DraftState, DraftPhase } from "@os-drafter/shared";
+import type { Team, DraftState } from "@os-drafter/shared";
 import { AWAKENINGS } from "@os-drafter/shared";
 import { cn } from "@/lib/utils";
 import { BanSlot } from "./ban-slot";
