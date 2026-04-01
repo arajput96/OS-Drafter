@@ -21,6 +21,8 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-team-blue: var(--team-blue);
+  --color-team-red: var(--team-red);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -114,6 +116,10 @@
   --chart-3: #12b5dc;
   --chart-4: #9090a0;
   --chart-5: #6a6a7a;
+
+  /* Team colors */
+  --team-blue: #3b82f6;
+  --team-red: #ef4444;
 
   /* Sidebar */
   --sidebar: #0d0d12;
