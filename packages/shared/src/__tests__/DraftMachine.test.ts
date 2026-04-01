@@ -556,6 +556,73 @@ describe("DraftMachine", () => {
     });
   });
 
+  describe("edge cases", () => {
+    it("auto-selects awakening on timer expiry during AWAKENING_REVEAL", () => {
+      const machine = createMachine({ numMapBans: 0 });
+      machine.start();
+      // Skip to awakening phase — timer expires for blue
+      const result = machine.expireTimer();
+      expect(result.ok).toBe(true);
+      // Blue should have a choice auto-assigned
+      expect(machine.getState().awakeningReveal.blueChoice).toBeTruthy();
+    });
+
+    it("skips MAP_BAN entirely when numMapBans is 0", () => {
+      const machine = createMachine({ numMapBans: 0 });
+      machine.start();
+      // Should jump straight to AWAKENING_REVEAL (not MAP_BAN)
+      expect(machine.getState().phase).toBe("AWAKENING_REVEAL");
+      expect(machine.getState().mapBans.blueBans).toHaveLength(0);
+      expect(machine.getState().mapBans.redBans).toHaveLength(0);
+    });
+
+    it("skips CHAR_BAN when numBans is 0 with staggered banMode", () => {
+      const machine = createMachine({ numMapBans: 0, numBans: 0, banMode: "staggered" });
+      machine.start();
+      completeAwakenings(machine);
+      // Should jump to CHAR_PICK, skipping CHAR_BAN
+      expect(machine.getState().phase).toBe("CHAR_PICK");
+    });
+
+    it("skips CHAR_BAN when numBans is 0 with simultaneous banMode", () => {
+      const machine = createMachine({ numMapBans: 0, numBans: 0, banMode: "simultaneous" });
+      machine.start();
+      completeAwakenings(machine);
+      expect(machine.getState().phase).toBe("CHAR_PICK");
+    });
+
+    it("handles large numBans (5 per team)", () => {
+      const machine = createMachine({
+        numMapBans: 0,
+        numBans: 5,
+        banMode: "staggered",
+        numPicks: 1,
+      });
+      machine.start();
+      completeAwakenings(machine);
+
+      expect(machine.getState().phase).toBe("CHAR_BAN");
+
+      // Complete all 10 ban steps (5 per team, staggered)
+      const state = machine.getState();
+      const banSteps = state.turnOrder.filter((s) => s.phase === "CHAR_BAN");
+      expect(banSteps).toHaveLength(10);
+
+      const available = [...CHARS];
+      for (const step of banSteps) {
+        const team = step.team as Team;
+        const result = machine.banCharacter(team, available.shift()!);
+        expect(result.ok).toBe(true);
+      }
+
+      // All 10 bans should be filled before picks
+      const afterBans = machine.getState();
+      expect(afterBans.blueTeamBans.filter(Boolean)).toHaveLength(5);
+      expect(afterBans.redTeamBans.filter(Boolean)).toHaveLength(5);
+      expect(afterBans.phase).toBe("CHAR_PICK");
+    });
+  });
+
   describe("full draft flow - all mode combinations", () => {
     const draftModes: DraftMode[] = ["snake", "alternating", "simultaneous"];
     const banModes: BanMode[] = ["simultaneous", "staggered", "none"];

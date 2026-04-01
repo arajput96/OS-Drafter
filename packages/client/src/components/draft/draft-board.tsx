@@ -1,6 +1,6 @@
 "use client";
 
-import type { DraftState, Team } from "@os-drafter/shared";
+import type { DraftState, RoomState, Team } from "@os-drafter/shared";
 import { PhaseBanner } from "@/components/ui/phase-banner";
 import { TimerDisplay } from "@/components/ui/timer-display";
 import { MapBanPhase } from "./map-ban-phase";
@@ -10,6 +10,7 @@ import { DraftComplete } from "./draft-complete";
 
 interface DraftBoardProps {
   draft: DraftState;
+  room: RoomState;
   myTeam: Team | null;
   timerRemaining: number;
   selectedId: string | null;
@@ -21,6 +22,7 @@ interface DraftBoardProps {
 
 export function DraftBoard({
   draft,
+  room,
   myTeam,
   timerRemaining,
   selectedId,
@@ -29,8 +31,25 @@ export function DraftBoard({
   onSelectCharacter,
   onLockIn,
 }: DraftBoardProps) {
+  const opponentDisconnected =
+    myTeam === "blue" ? !room.redConnected :
+    myTeam === "red" ? !room.blueConnected :
+    false;
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Opponent disconnect banner */}
+      {opponentDisconnected && draft.phase !== "COMPLETE" && (
+        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-center text-sm text-yellow-400">
+          Opponent disconnected. Waiting for reconnection...
+        </div>
+      )}
+
+      {/* Spectator label */}
+      {!myTeam && (
+        <p className="text-center text-xs text-muted-foreground">Spectating</p>
+      )}
+
       {/* Header: Phase + Timer */}
       <div className="flex flex-col items-center gap-2">
         <PhaseBanner phase={draft.phase} />

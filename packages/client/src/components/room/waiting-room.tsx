@@ -12,8 +12,14 @@ interface WaitingRoomProps {
 }
 
 export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
+  const [starting, setStarting] = useState(false);
   const canStart =
     role !== "spectator" && room.blueConnected && room.redConnected;
+
+  const handleStart = () => {
+    setStarting(true);
+    onStart();
+  };
 
   const [baseUrl, setBaseUrl] = useState("");
   useEffect(() => {
@@ -67,8 +73,13 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
 
       {/* Start button */}
       {role !== "spectator" && (
-        <Button onClick={onStart} disabled={!canStart} size="lg" className="w-full">
-          {canStart ? "Start Draft" : "Waiting for both teams..."}
+        <Button
+          onClick={handleStart}
+          disabled={!canStart || starting}
+          size="lg"
+          className="w-full"
+        >
+          {starting ? "Starting..." : canStart ? "Start Draft" : "Waiting for both teams..."}
         </Button>
       )}
     </div>
