@@ -1,19 +1,21 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { Server } from "socket.io";
-import { APP_NAME, SERVER_PORT } from "@os-drafter/shared";
+import { APP_NAME, SERVER_PORT, CLIENT_PORT } from "@os-drafter/shared";
+
+const CLIENT_ORIGIN = `http://localhost:${CLIENT_PORT}`;
 
 const fastify = Fastify({
   logger: true,
 });
 
 await fastify.register(cors, {
-  origin: ["http://localhost:3000"],
+  origin: [CLIENT_ORIGIN],
 });
 
 const io = new Server(fastify.server, {
   cors: {
-    origin: ["http://localhost:3000"],
+    origin: [CLIENT_ORIGIN],
   },
 });
 

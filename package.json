@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "predev": "pnpm --filter @os-drafter/shared build",
-    "dev": "concurrently -n client,server -c blue,green \"pnpm --filter @os-drafter/client dev\" \"pnpm --filter @os-drafter/server dev\"",
+    "dev": "concurrently -n shared,client,server -c magenta,blue,green \"pnpm --filter @os-drafter/shared dev\" \"pnpm --filter @os-drafter/client dev\" \"pnpm --filter @os-drafter/server dev\"",
     "build": "pnpm --filter @os-drafter/shared build && pnpm --filter @os-drafter/client build && pnpm --filter @os-drafter/server build",
     "lint": "pnpm -r lint"
   },
