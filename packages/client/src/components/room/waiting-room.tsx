@@ -4,6 +4,7 @@ import type { RoomState, RoomRole } from "@os-drafter/shared";
 import { Button } from "@/components/ui/button";
 import { Check, Copy, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useDraftStore } from "@/store/draft-store";
 
 interface WaitingRoomProps {
   room: RoomState;
@@ -13,10 +14,17 @@ interface WaitingRoomProps {
 
 export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
   const [starting, setStarting] = useState(false);
+  const error = useDraftStore((s) => s.error);
   const canStart =
     role !== "spectator" && room.blueConnected && room.redConnected;
 
+  // Reset starting state if an error occurs (e.g., server rejected the start)
+  useEffect(() => {
+    if (error) setStarting(false);
+  }, [error]);
+
   const handleStart = () => {
+    if (starting) return;
     setStarting(true);
     onStart();
   };

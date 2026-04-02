@@ -84,15 +84,19 @@ export function waitForEvent<E extends keyof ServerToClientEvents>(
   timeout = 5000,
 ): Promise<Parameters<ServerToClientEvents[E]>> {
   return new Promise((resolve, reject) => {
+    const handler = (...args: unknown[]) => {
+      clearTimeout(timer);
+      resolve(args as Parameters<ServerToClientEvents[E]>);
+    };
+
     const timer = setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (socket as any).off(event, handler);
       reject(new Error(`Timed out waiting for event "${event}"`));
     }, timeout);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (socket as any).once(event, (...args: unknown[]) => {
-      clearTimeout(timer);
-      resolve(args as Parameters<ServerToClientEvents[E]>);
-    });
+    (socket as any).once(event, handler);
   });
 }
 
@@ -102,13 +106,17 @@ export function waitForEvent<E extends keyof ServerToClientEvents>(
 export function waitForConnect(socket: TestSocket, timeout = 5000): Promise<void> {
   if (socket.connected) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error("Timed out waiting for socket connect"));
-    }, timeout);
-    socket.once("connect", () => {
+    const handler = () => {
       clearTimeout(timer);
       resolve();
-    });
+    };
+
+    const timer = setTimeout(() => {
+      socket.off("connect", handler);
+      reject(new Error("Timed out waiting for socket connect"));
+    }, timeout);
+
+    socket.once("connect", handler);
   });
 }
 
@@ -118,13 +126,17 @@ export function waitForConnect(socket: TestSocket, timeout = 5000): Promise<void
 export function waitForDisconnect(socket: TestSocket, timeout = 5000): Promise<void> {
   if (socket.disconnected) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error("Timed out waiting for socket disconnect"));
-    }, timeout);
-    socket.once("disconnect", () => {
+    const handler = () => {
       clearTimeout(timer);
       resolve();
-    });
+    };
+
+    const timer = setTimeout(() => {
+      socket.off("disconnect", handler);
+      reject(new Error("Timed out waiting for socket disconnect"));
+    }, timeout);
+
+    socket.once("disconnect", handler);
   });
 }
 
