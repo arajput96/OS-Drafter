@@ -4,31 +4,52 @@ import type { DraftConfig } from "../types.js";
 
 function makeConfig(overrides: Partial<DraftConfig> = {}): DraftConfig {
   return {
-    draftMode: "alternating",
-    banMode: "staggered",
+    draftMode: "snake",
+    banMode: "simultaneous",
     mirrorRule: "no_mirrors",
     timerSeconds: 30,
     numBans: 2,
     numPicks: 3,
-    numMapBans: 2,
+    mapBanMode: "bo1",
+    blueMapRole: "side_select",
+    excludedMaps: [],
     ...overrides,
   };
 }
 
 describe("generateTurnOrder", () => {
-  describe("map ban steps", () => {
-    it("generates alternating map bans (blue first)", () => {
-      const steps = generateTurnOrder(makeConfig({ numMapBans: 2 }));
-      const mapBans = steps.filter((s) => s.phase === "MAP_BAN");
-      expect(mapBans).toHaveLength(4); // 2 per team
-      expect(mapBans.map((s) => s.team)).toEqual(["blue", "red", "blue", "red"]);
-      expect(mapBans.every((s) => s.type === "map_ban")).toBe(true);
+  describe("Bo1 map steps", () => {
+    it("generates S ban x3 then M pick (blue = side_select)", () => {
+      const steps = generateTurnOrder(makeConfig());
+      const mapSteps = steps.filter((s) => s.phase === "MAP_BAN");
+      expect(mapSteps).toHaveLength(4);
+      // blue = side_select bans 3, red = map_select picks 1
+      expect(mapSteps.map((s) => s.team)).toEqual(["blue", "blue", "blue", "red"]);
+      expect(mapSteps.map((s) => s.type)).toEqual(["map_ban", "map_ban", "map_ban", "map_pick"]);
     });
 
-    it("skips map bans when numMapBans is 0", () => {
-      const steps = generateTurnOrder(makeConfig({ numMapBans: 0 }));
-      const mapBans = steps.filter((s) => s.phase === "MAP_BAN");
-      expect(mapBans).toHaveLength(0);
+    it("respects blueMapRole: map_select", () => {
+      const steps = generateTurnOrder(makeConfig({ blueMapRole: "map_select" }));
+      const mapSteps = steps.filter((s) => s.phase === "MAP_BAN");
+      // red = side_select bans 3, blue = map_select picks 1
+      expect(mapSteps.map((s) => s.team)).toEqual(["red", "red", "red", "blue"]);
+      expect(mapSteps.map((s) => s.type)).toEqual(["map_ban", "map_ban", "map_ban", "map_pick"]);
+    });
+  });
+
+  describe("Bo3 map steps", () => {
+    it("generates S ban, M ban, S pick, M pick, S ban, M ban", () => {
+      const steps = generateTurnOrder(makeConfig({
+        mapBanMode: "bo3",
+        blueMapRole: "side_select",
+      }));
+      const mapSteps = steps.filter((s) => s.phase === "MAP_BAN");
+      expect(mapSteps).toHaveLength(6);
+      // blue = side_select, red = map_select
+      expect(mapSteps.map((s) => s.team)).toEqual(["blue", "red", "blue", "red", "blue", "red"]);
+      expect(mapSteps.map((s) => s.type)).toEqual([
+        "map_ban", "map_ban", "map_pick", "map_pick", "map_ban", "map_ban",
+      ]);
     });
   });
 

@@ -35,6 +35,8 @@ export type DraftPhase =
 export type DraftMode = "snake" | "alternating" | "simultaneous";
 export type BanMode = "simultaneous" | "staggered" | "none";
 export type MirrorRule = "no_mirrors" | "team_mirrors" | "full_duplicates";
+export type MapBanMode = "bo1" | "bo3";
+export type MapRole = "side_select" | "map_select";
 
 export interface DraftConfig {
   draftMode: DraftMode;
@@ -43,12 +45,20 @@ export interface DraftConfig {
   timerSeconds: number;
   numBans: number;
   numPicks: number;
-  numMapBans: number;
+  mapBanMode: MapBanMode;
+  blueMapRole: MapRole;
+  excludedMaps: string[];
 }
 
 export type DraftAction =
   | {
       type: "map_ban";
+      team: Team;
+      mapId: string;
+      index: number;
+    }
+  | {
+      type: "map_pick";
       team: Team;
       mapId: string;
       index: number;
@@ -77,7 +87,10 @@ export interface MapBanState {
   mapPool: string[];
   blueBans: string[];
   redBans: string[];
+  bluePicks: string[];
+  redPicks: string[];
   selectedMap: string | null;
+  gameOrder: [string | null, string | null, string | null];
 }
 
 export interface AwakeningRevealState {
@@ -89,7 +102,7 @@ export interface AwakeningRevealState {
 export interface TurnStep {
   phase: DraftPhase;
   team: Team | "both";
-  type: "map_ban" | "awakening_pick" | "ban" | "pick";
+  type: "map_ban" | "map_pick" | "awakening_pick" | "ban" | "pick";
   index: number;
 }
 
@@ -139,6 +152,7 @@ export interface ClientToServerEvents {
   "room:join": (roomId: string, role: RoomRole) => void;
   "draft:start": () => void;
   "draft:ban-map": (mapId: string) => void;
+  "draft:pick-map": (mapId: string) => void;
   "draft:pick-awakening": (awakeningId: string) => void;
   "draft:select": (characterId: string) => void;
   "draft:lock": () => void;

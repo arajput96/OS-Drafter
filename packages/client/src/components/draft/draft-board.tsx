@@ -1,6 +1,6 @@
 "use client";
 
-import type { DraftState, Team } from "@os-drafter/shared";
+import type { DraftState, RoomState, Team } from "@os-drafter/shared";
 import { PhaseBanner } from "@/components/ui/phase-banner";
 import { TimerDisplay } from "@/components/ui/timer-display";
 import { MapBanPhase } from "./map-ban-phase";
@@ -10,10 +10,12 @@ import { DraftComplete } from "./draft-complete";
 
 interface DraftBoardProps {
   draft: DraftState;
+  room: RoomState;
   myTeam: Team | null;
   timerRemaining: number;
   selectedId: string | null;
   onBanMap?: (mapId: string) => void;
+  onPickMap?: (mapId: string) => void;
   onPickAwakening?: (awakeningId: string) => void;
   onSelectCharacter?: (characterId: string) => void;
   onLockIn?: () => void;
@@ -21,16 +23,35 @@ interface DraftBoardProps {
 
 export function DraftBoard({
   draft,
+  room,
   myTeam,
   timerRemaining,
   selectedId,
   onBanMap,
+  onPickMap,
   onPickAwakening,
   onSelectCharacter,
   onLockIn,
 }: DraftBoardProps) {
+  const opponentDisconnected =
+    myTeam === "blue" ? !room.redConnected :
+    myTeam === "red" ? !room.blueConnected :
+    false;
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Opponent disconnect banner */}
+      {opponentDisconnected && draft.phase !== "COMPLETE" && (
+        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-center text-sm text-yellow-400">
+          Opponent disconnected. Waiting for reconnection...
+        </div>
+      )}
+
+      {/* Spectator label */}
+      {!myTeam && (
+        <p className="text-center text-xs text-muted-foreground">Spectating</p>
+      )}
+
       {/* Header: Phase + Timer */}
       <div className="flex flex-col items-center gap-2">
         <PhaseBanner phase={draft.phase} />
@@ -47,7 +68,7 @@ export function DraftBoard({
 
       {/* Phase-specific UI */}
       {draft.phase === "MAP_BAN" && (
-        <MapBanPhase draft={draft} myTeam={myTeam} onBanMap={onBanMap} />
+        <MapBanPhase draft={draft} myTeam={myTeam} onBanMap={onBanMap} onPickMap={onPickMap} />
       )}
       {draft.phase === "AWAKENING_REVEAL" && (
         <AwakeningPhase
@@ -84,7 +105,7 @@ function TurnIndicator({
     const label =
       currentTurn === "both"
         ? "Both teams picking"
-        : `${currentTurn === "blue" ? "Blue" : "Red"} team's turn`;
+        : `${currentTurn === "blue" ? "Side Select" : "Map Select"}'s turn`;
     return <p className="text-sm text-muted-foreground">{label}</p>;
   }
 

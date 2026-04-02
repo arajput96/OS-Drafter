@@ -4,6 +4,7 @@ import type { RoomState, RoomRole } from "@os-drafter/shared";
 import { Button } from "@/components/ui/button";
 import { Check, Copy, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useDraftStore } from "@/store/draft-store";
 
 interface WaitingRoomProps {
   room: RoomState;
@@ -12,8 +13,21 @@ interface WaitingRoomProps {
 }
 
 export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
+  const [starting, setStarting] = useState(false);
+  const error = useDraftStore((s) => s.error);
   const canStart =
     role !== "spectator" && room.blueConnected && room.redConnected;
+
+  // Reset starting state if an error occurs (e.g., server rejected the start)
+  useEffect(() => {
+    if (error) setStarting(false);
+  }, [error]);
+
+  const handleStart = () => {
+    if (starting) return;
+    setStarting(true);
+    onStart();
+  };
 
   const [baseUrl, setBaseUrl] = useState("");
   useEffect(() => {
@@ -29,12 +43,12 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
       {/* Connection status */}
       <div className="flex flex-col gap-3">
         <ConnectionStatus
-          label="Blue Team"
+          label="Side Select"
           connected={room.blueConnected}
           colorClass="text-team-blue"
         />
         <ConnectionStatus
-          label="Red Team"
+          label="Map Select"
           connected={room.redConnected}
           colorClass="text-team-red"
         />
@@ -50,25 +64,28 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
         <p className="text-xs uppercase tracking-wider text-muted-foreground">
           Share these links
         </p>
-        <CopyLink label="Blue" url={`${baseUrl}?role=blue`} />
-        <CopyLink label="Red" url={`${baseUrl}?role=red`} />
+        <CopyLink label="Side Select" url={`${baseUrl}?role=blue`} />
+        <CopyLink label="Map Select" url={`${baseUrl}?role=red`} />
         <CopyLink label="Spectator" url={`${baseUrl}?role=spectator`} />
       </div>
 
       {/* Config summary */}
       <div className="rounded-lg bg-secondary/50 p-3 text-xs text-muted-foreground">
         <p>
-          Mode: {room.config.draftMode} | Bans: {room.config.banMode} (
-          {room.config.numBans}) | Picks: {room.config.numPicks} | Mirror:{" "}
-          {room.config.mirrorRule.replace("_", " ")} | Timer:{" "}
-          {room.config.timerSeconds}s | Map Bans: {room.config.numMapBans}
+          Format: {room.config.mapBanMode.toUpperCase()} | Bans: {room.config.numBans} | Picks:{" "}
+          {room.config.numPicks} | Timer: {room.config.timerSeconds}s
         </p>
       </div>
 
       {/* Start button */}
       {role !== "spectator" && (
-        <Button onClick={onStart} disabled={!canStart} size="lg" className="w-full">
-          {canStart ? "Start Draft" : "Waiting for both teams..."}
+        <Button
+          onClick={handleStart}
+          disabled={!canStart || starting}
+          size="lg"
+          className="w-full"
+        >
+          {starting ? "Starting..." : canStart ? "Start Draft" : "Waiting for both teams..."}
         </Button>
       )}
     </div>

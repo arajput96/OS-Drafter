@@ -3,6 +3,8 @@ import type { DraftConfig } from "@os-drafter/shared";
 const VALID_DRAFT_MODES = ["snake", "alternating", "simultaneous"];
 const VALID_BAN_MODES = ["simultaneous", "staggered", "none"];
 const VALID_MIRROR_RULES = ["no_mirrors", "team_mirrors", "full_duplicates"];
+const VALID_MAP_BAN_MODES = ["bo1", "bo3"];
+const VALID_MAP_ROLES = ["side_select", "map_select"];
 
 /**
  * Validates a DraftConfig object. Returns null if valid, or an error string.
@@ -32,8 +34,21 @@ export function validateDraftConfig(config: unknown): string | null {
   if (typeof c.numPicks !== "number" || c.numPicks < 1) {
     return "numPicks must be a positive integer";
   }
-  if (typeof c.numMapBans !== "number" || c.numMapBans < 0) {
-    return "numMapBans must be a non-negative integer";
+
+  if (!VALID_MAP_BAN_MODES.includes(c.mapBanMode as string)) {
+    return `Invalid mapBanMode: must be one of ${VALID_MAP_BAN_MODES.join(", ")}`;
+  }
+  if (c.blueMapRole === undefined) {
+    return "blueMapRole is required";
+  }
+  if (!VALID_MAP_ROLES.includes(c.blueMapRole as string)) {
+    return `Invalid blueMapRole: must be one of ${VALID_MAP_ROLES.join(", ")}`;
+  }
+  if (!Array.isArray(c.excludedMaps) || c.excludedMaps.length !== 3) {
+    return "excludedMaps must be an array of exactly 3 map IDs";
+  }
+  if (new Set(c.excludedMaps).size !== 3) {
+    return "excludedMaps must contain 3 distinct map IDs";
   }
 
   return null;
@@ -49,7 +64,9 @@ export const draftConfigSchema = {
     "timerSeconds",
     "numBans",
     "numPicks",
-    "numMapBans",
+    "mapBanMode",
+    "blueMapRole",
+    "excludedMaps",
   ],
   properties: {
     draftMode: { type: "string" as const, enum: VALID_DRAFT_MODES },
@@ -58,7 +75,15 @@ export const draftConfigSchema = {
     timerSeconds: { type: "integer" as const, minimum: 1 },
     numBans: { type: "integer" as const, minimum: 0 },
     numPicks: { type: "integer" as const, minimum: 1 },
-    numMapBans: { type: "integer" as const, minimum: 0 },
+    mapBanMode: { type: "string" as const, enum: VALID_MAP_BAN_MODES },
+    blueMapRole: { type: "string" as const, enum: VALID_MAP_ROLES },
+    excludedMaps: {
+      type: "array" as const,
+      items: { type: "string" as const },
+      minItems: 3,
+      maxItems: 3,
+      uniqueItems: true,
+    },
   },
   additionalProperties: false,
 };

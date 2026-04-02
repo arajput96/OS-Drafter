@@ -9,13 +9,15 @@ const AWK_IDS = ["a1", "a2", "a3", "a4"];
 
 function makeConfig(overrides: Partial<DraftConfig> = {}): DraftConfig {
   return {
-    draftMode: "alternating",
-    banMode: "staggered",
+    draftMode: "snake",
+    banMode: "simultaneous",
     mirrorRule: "no_mirrors",
     timerSeconds: 30,
     numBans: 1,
     numPicks: 3,
-    numMapBans: 1,
+    mapBanMode: "bo1",
+    blueMapRole: "side_select",
+    excludedMaps: [],
     ...overrides,
   };
 }
@@ -24,16 +26,22 @@ function createMachine(overrides: Partial<DraftConfig> = {}): DraftMachine {
   return new DraftMachine(makeConfig(overrides), CHARS, MAP_IDS, AWK_IDS);
 }
 
-/** Helper: run through all map ban steps */
-function completeMapBans(machine: DraftMachine): void {
+/** Helper: run through all map phase steps (bans + picks) */
+function completeMapPhase(machine: DraftMachine): void {
   const state = machine.getState();
   const mapSteps = state.turnOrder.filter((s) => s.phase === "MAP_BAN");
-  const available = [...MAP_IDS];
+  const pool = [...state.mapBans.mapPool];
+  let idx = 0;
   for (const step of mapSteps) {
     const team = step.team as Team;
-    const mapId = available.shift()!;
-    const result = machine.banMap(team, mapId);
-    expect(result.ok).toBe(true);
+    const mapId = pool[idx++]!;
+    if (step.type === "map_pick") {
+      const result = machine.pickMap(team, mapId);
+      expect(result.ok).toBe(true);
+    } else {
+      const result = machine.banMap(team, mapId);
+      expect(result.ok).toBe(true);
+    }
   }
 }
 
@@ -133,29 +141,30 @@ describe("DraftMachine", () => {
     });
   });
 
-  describe("map ban phase", () => {
+  describe("map phase - Bo1", () => {
     let machine: DraftMachine;
 
     beforeEach(() => {
-      machine = createMachine({ numMapBans: 1 });
+      // Bo1 default: blue = side_select, red = map_select
+      // Flow: blue ban, blue ban, blue ban, red pick
+      machine = createMachine();
       machine.start();
     });
 
-    it("allows blue to ban a map on blue's turn", () => {
+    it("allows side select (blue) to ban maps", () => {
       const result = machine.banMap("blue", "m1");
       expect(result.ok).toBe(true);
       expect(machine.getState().mapBans.blueBans).toContain("m1");
     });
 
-    it("rejects ban from wrong team", () => {
+    it("rejects ban from map select (red) during ban steps", () => {
       const result = machine.banMap("red", "m1");
       expect(result.ok).toBe(false);
     });
 
     it("rejects banning already-banned map", () => {
       machine.banMap("blue", "m1");
-      // Now it's red's turn
-      const result = machine.banMap("red", "m1");
+      const result = machine.banMap("blue", "m1");
       expect(result.ok).toBe(false);
     });
 
@@ -164,18 +173,26 @@ describe("DraftMachine", () => {
       expect(result.ok).toBe(false);
     });
 
-    it("selects a random map after all bans complete", () => {
+    it("allows map select (red) to pick after all bans", () => {
       machine.banMap("blue", "m1");
-      machine.banMap("red", "m2");
-      // After map bans, a map should be selected from remaining
-      const selected = machine.getState().mapBans.selectedMap;
-      expect(selected).not.toBeNull();
-      expect(["m3", "m4", "m5", "m6"]).toContain(selected);
+      machine.banMap("blue", "m2");
+      machine.banMap("blue", "m3");
+      // Now it should be red's turn to pick
+      const result = machine.pickMap("red", "m4");
+      expect(result.ok).toBe(true);
+      expect(machine.getState().mapBans.selectedMap).toBe("m4");
     });
 
-    it("transitions to AWAKENING_REVEAL after map bans complete", () => {
+    it("rejects picking a banned map", () => {
       machine.banMap("blue", "m1");
-      machine.banMap("red", "m2");
+      machine.banMap("blue", "m2");
+      machine.banMap("blue", "m3");
+      const result = machine.pickMap("red", "m1");
+      expect(result.ok).toBe(false);
+    });
+
+    it("transitions to AWAKENING_REVEAL after map phase completes", () => {
+      completeMapPhase(machine);
       expect(machine.getState().phase).toBe("AWAKENING_REVEAL");
     });
   });
@@ -184,9 +201,9 @@ describe("DraftMachine", () => {
     let machine: DraftMachine;
 
     beforeEach(() => {
-      machine = createMachine({ numMapBans: 1 });
+      machine = createMachine();
       machine.start();
-      completeMapBans(machine);
+      completeMapPhase(machine);
     });
 
     it("allows blue to pick a revealed awakening", () => {
@@ -228,12 +245,13 @@ describe("DraftMachine", () => {
   describe("no awakenings", () => {
     it("skips AWAKENING_REVEAL when no awakenings provided", () => {
       const machine = new DraftMachine(
-        makeConfig({ numMapBans: 0, banMode: "none" }),
+        makeConfig({ banMode: "none" }),
         CHARS,
         MAP_IDS,
         [], // no awakenings
       );
       machine.start();
+      completeMapPhase(machine);
       // Should skip straight to CHAR_PICK
       expect(machine.getState().phase).toBe("CHAR_PICK");
     });
@@ -246,7 +264,7 @@ describe("DraftMachine", () => {
       beforeEach(() => {
         machine = createMachine({ banMode: "staggered", numBans: 1 });
         machine.start();
-        completeMapBans(machine);
+        completeMapPhase(machine);
         completeAwakenings(machine);
       });
 
@@ -285,7 +303,7 @@ describe("DraftMachine", () => {
       beforeEach(() => {
         machine = createMachine({ banMode: "simultaneous", numBans: 1 });
         machine.start();
-        completeMapBans(machine);
+        completeMapPhase(machine);
         completeAwakenings(machine);
       });
 
@@ -326,7 +344,7 @@ describe("DraftMachine", () => {
       it("skips directly to CHAR_PICK", () => {
         const machine = createMachine({ banMode: "none" });
         machine.start();
-        completeMapBans(machine);
+        completeMapPhase(machine);
         completeAwakenings(machine);
         expect(machine.getState().phase).toBe("CHAR_PICK");
       });
@@ -338,8 +356,9 @@ describe("DraftMachine", () => {
       let machine: DraftMachine;
 
       beforeEach(() => {
-        machine = createMachine({ draftMode: "alternating", banMode: "none", numMapBans: 0 });
+        machine = createMachine({ draftMode: "alternating", banMode: "none" });
         machine.start();
+        completeMapPhase(machine);
         completeAwakenings(machine);
       });
 
@@ -371,8 +390,9 @@ describe("DraftMachine", () => {
       let machine: DraftMachine;
 
       beforeEach(() => {
-        machine = createMachine({ draftMode: "snake", banMode: "none", numMapBans: 0 });
+        machine = createMachine({ draftMode: "snake", banMode: "none" });
         machine.start();
+        completeMapPhase(machine);
         completeAwakenings(machine);
       });
 
@@ -400,10 +420,10 @@ describe("DraftMachine", () => {
         machine = createMachine({
           draftMode: "simultaneous",
           banMode: "none",
-          numMapBans: 0,
           mirrorRule: "full_duplicates",
         });
         machine.start();
+        completeMapPhase(machine);
         completeAwakenings(machine);
       });
 
@@ -439,10 +459,10 @@ describe("DraftMachine", () => {
       const machine = createMachine({
         draftMode: "alternating",
         banMode: "none",
-        numMapBans: 0,
         mirrorRule: "no_mirrors",
       });
       machine.start();
+      completeMapPhase(machine);
       completeAwakenings(machine);
       machine.pickCharacter("blue", "c1");
       // Red cannot pick c1
@@ -454,10 +474,10 @@ describe("DraftMachine", () => {
       const machine = createMachine({
         draftMode: "alternating",
         banMode: "none",
-        numMapBans: 0,
         mirrorRule: "team_mirrors",
       });
       machine.start();
+      completeMapPhase(machine);
       completeAwakenings(machine);
       machine.pickCharacter("blue", "c1");
       // Red CAN pick c1
@@ -469,10 +489,10 @@ describe("DraftMachine", () => {
       const machine = createMachine({
         draftMode: "alternating",
         banMode: "none",
-        numMapBans: 0,
         mirrorRule: "full_duplicates",
       });
       machine.start();
+      completeMapPhase(machine);
       completeAwakenings(machine);
       machine.pickCharacter("blue", "c1");
       const result = machine.pickCharacter("red", "c1");
@@ -482,7 +502,7 @@ describe("DraftMachine", () => {
 
   describe("timer expiry", () => {
     it("auto-selects random map on map ban timeout", () => {
-      const machine = createMachine({ numMapBans: 1 });
+      const machine = createMachine();
       machine.start();
       const result = machine.expireTimer();
       expect(result.ok).toBe(true);
@@ -490,8 +510,9 @@ describe("DraftMachine", () => {
     });
 
     it("auto-selects random character on ban timeout", () => {
-      const machine = createMachine({ banMode: "staggered", numBans: 1, numMapBans: 0 });
+      const machine = createMachine({ banMode: "staggered", numBans: 1 });
       machine.start();
+      completeMapPhase(machine);
       completeAwakenings(machine);
       const result = machine.expireTimer();
       expect(result.ok).toBe(true);
@@ -499,8 +520,9 @@ describe("DraftMachine", () => {
     });
 
     it("auto-selects random character on pick timeout", () => {
-      const machine = createMachine({ banMode: "none", numMapBans: 0 });
+      const machine = createMachine({ banMode: "none" });
       machine.start();
+      completeMapPhase(machine);
       completeAwakenings(machine);
       const result = machine.expireTimer();
       expect(result.ok).toBe(true);
@@ -511,10 +533,10 @@ describe("DraftMachine", () => {
       const machine = createMachine({
         banMode: "simultaneous",
         numBans: 1,
-        numMapBans: 0,
         mirrorRule: "full_duplicates",
       });
       machine.start();
+      completeMapPhase(machine);
       completeAwakenings(machine);
       // Neither team submits, timer expires
       const result = machine.expireTimer();
@@ -527,10 +549,10 @@ describe("DraftMachine", () => {
       const machine = createMachine({
         banMode: "simultaneous",
         numBans: 1,
-        numMapBans: 0,
         mirrorRule: "full_duplicates",
       });
       machine.start();
+      completeMapPhase(machine);
       completeAwakenings(machine);
       // Blue submits, red doesn't
       machine.banCharacter("blue", "c1");
@@ -543,8 +565,9 @@ describe("DraftMachine", () => {
 
   describe("completion", () => {
     it("rejects all actions in COMPLETE phase", () => {
-      const machine = createMachine({ banMode: "none", numMapBans: 0 });
+      const machine = createMachine({ banMode: "none" });
       machine.start();
+      completeMapPhase(machine);
       completeAwakenings(machine);
       completeCharPicks(machine);
       expect(machine.getState().phase).toBe("COMPLETE");
@@ -553,6 +576,81 @@ describe("DraftMachine", () => {
       expect(machine.banMap("blue", "m1").ok).toBe(false);
       expect(machine.banCharacter("blue", "c1").ok).toBe(false);
       expect(machine.pickCharacter("blue", "c1").ok).toBe(false);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("auto-selects awakening on timer expiry during AWAKENING_REVEAL", () => {
+      const machine = createMachine();
+      machine.start();
+      completeMapPhase(machine);
+      // Timer expires for blue during awakening
+      const result = machine.expireTimer();
+      expect(result.ok).toBe(true);
+      // Blue should have a choice auto-assigned
+      expect(machine.getState().awakeningReveal.blueChoice).toBeTruthy();
+    });
+
+    it("skips CHAR_BAN when numBans is 0 with staggered banMode", () => {
+      const machine = createMachine({ numBans: 0, banMode: "staggered" });
+      machine.start();
+      completeMapPhase(machine);
+      completeAwakenings(machine);
+      // Should jump to CHAR_PICK, skipping CHAR_BAN
+      expect(machine.getState().phase).toBe("CHAR_PICK");
+    });
+
+    it("skips CHAR_BAN when numBans is 0 with simultaneous banMode", () => {
+      const machine = createMachine({ numBans: 0, banMode: "simultaneous" });
+      machine.start();
+      completeMapPhase(machine);
+      completeAwakenings(machine);
+      expect(machine.getState().phase).toBe("CHAR_PICK");
+    });
+
+    it("handles large numBans (5 per team)", () => {
+      const machine = createMachine({
+        numBans: 5,
+        banMode: "staggered",
+        numPicks: 1,
+      });
+      machine.start();
+      completeMapPhase(machine);
+      completeAwakenings(machine);
+
+      expect(machine.getState().phase).toBe("CHAR_BAN");
+
+      // Complete all 10 ban steps (5 per team, staggered)
+      const state = machine.getState();
+      const banSteps = state.turnOrder.filter((s) => s.phase === "CHAR_BAN");
+      expect(banSteps).toHaveLength(10);
+
+      const available = [...CHARS];
+      for (const step of banSteps) {
+        const team = step.team as Team;
+        const result = machine.banCharacter(team, available.shift()!);
+        expect(result.ok).toBe(true);
+      }
+
+      // All 10 bans should be filled before picks
+      const afterBans = machine.getState();
+      expect(afterBans.blueTeamBans.filter(Boolean)).toHaveLength(5);
+      expect(afterBans.redTeamBans.filter(Boolean)).toHaveLength(5);
+      expect(afterBans.phase).toBe("CHAR_PICK");
+    });
+
+    it("filters excluded maps from the pool", () => {
+      const machine = createMachine({
+        mapBanMode: "bo3",
+        blueMapRole: "side_select",
+        excludedMaps: ["m1", "m2", "m3"],
+      });
+      machine.start();
+      const pool = machine.getState().mapBans.mapPool;
+      expect(pool).not.toContain("m1");
+      expect(pool).not.toContain("m2");
+      expect(pool).not.toContain("m3");
+      expect(pool).toHaveLength(3);
     });
   });
 
@@ -571,11 +669,10 @@ describe("DraftMachine", () => {
               mirrorRule,
               numBans: 1,
               numPicks: 3,
-              numMapBans: 1,
             });
 
             machine.start();
-            completeMapBans(machine);
+            completeMapPhase(machine);
             completeAwakenings(machine);
             if (banMode !== "none") {
               completeCharBans(machine);
