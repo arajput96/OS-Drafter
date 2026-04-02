@@ -1,28 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import type { DraftConfig, DraftMode, BanMode, MirrorRule } from "@os-drafter/shared";
+import type { DraftConfig, MapBanMode } from "@os-drafter/shared";
+import { MAPS } from "@os-drafter/shared";
 import { Button } from "@/components/ui/button";
 import { createRoom, type CreateRoomResponse } from "@/lib/api";
 import { Check, Copy } from "lucide-react";
 
-const DRAFT_MODES: { value: DraftMode; label: string }[] = [
-  { value: "snake", label: "Snake" },
-  { value: "alternating", label: "Alternating" },
-  { value: "simultaneous", label: "Simultaneous" },
+const MAP_BAN_MODES: { value: MapBanMode; label: string }[] = [
+  { value: "bo1", label: "Best of 1" },
+  { value: "bo3", label: "Best of 3" },
 ];
 
-const BAN_MODES: { value: BanMode; label: string }[] = [
-  { value: "simultaneous", label: "Simultaneous" },
-  { value: "staggered", label: "Staggered" },
-  { value: "none", label: "None" },
-];
-
-const MIRROR_RULES: { value: MirrorRule; label: string }[] = [
-  { value: "no_mirrors", label: "No Mirrors" },
-  { value: "team_mirrors", label: "Team Mirrors" },
-  { value: "full_duplicates", label: "Full Duplicates" },
-];
 
 export function RoomCreationForm() {
   const [config, setConfig] = useState<DraftConfig>({
@@ -30,9 +19,11 @@ export function RoomCreationForm() {
     banMode: "simultaneous",
     mirrorRule: "no_mirrors",
     timerSeconds: 30,
-    numBans: 2,
+    numBans: 1,
     numPicks: 3,
-    numMapBans: 2,
+    mapBanMode: "bo3",
+    blueMapRole: "side_select",
+    excludedMaps: [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,24 +57,15 @@ export function RoomCreationForm() {
       </h2>
 
       <SelectField
-        label="Draft Mode"
-        value={config.draftMode}
-        options={DRAFT_MODES}
-        onChange={(v) => setConfig({ ...config, draftMode: v as DraftMode })}
+        label="Series Format"
+        value={config.mapBanMode}
+        options={MAP_BAN_MODES}
+        onChange={(v) => setConfig({ ...config, mapBanMode: v as MapBanMode })}
       />
 
-      <SelectField
-        label="Ban Mode"
-        value={config.banMode}
-        options={BAN_MODES}
-        onChange={(v) => setConfig({ ...config, banMode: v as BanMode })}
-      />
-
-      <SelectField
-        label="Mirror Rule"
-        value={config.mirrorRule}
-        options={MIRROR_RULES}
-        onChange={(v) => setConfig({ ...config, mirrorRule: v as MirrorRule })}
+      <MapExclusionPicker
+        excludedMaps={config.excludedMaps ?? []}
+        onChange={(excluded) => setConfig({ ...config, excludedMaps: excluded })}
       />
 
       <NumberField
@@ -94,35 +76,16 @@ export function RoomCreationForm() {
         onChange={(v) => setConfig({ ...config, timerSeconds: v })}
       />
 
-      <NumberField
-        label="Bans per Team"
-        value={config.numBans}
-        min={0}
-        max={5}
-        onChange={(v) => setConfig({ ...config, numBans: v })}
-      />
-
-      <NumberField
-        label="Picks per Team"
-        value={config.numPicks}
-        min={1}
-        max={5}
-        onChange={(v) => setConfig({ ...config, numPicks: v })}
-      />
-
-      <NumberField
-        label="Map Bans per Team"
-        value={config.numMapBans}
-        min={0}
-        max={4}
-        onChange={(v) => setConfig({ ...config, numMapBans: v })}
-      />
-
       {error && (
         <p className="text-sm text-destructive text-center">{error}</p>
       )}
 
-      <Button type="submit" disabled={loading} size="lg" className="w-full">
+      <Button
+        type="submit"
+        disabled={loading || (config.excludedMaps?.length ?? 0) !== 3}
+        size="lg"
+        className="w-full"
+      >
         {loading ? "Creating..." : "Create Room"}
       </Button>
     </form>
@@ -196,6 +159,57 @@ function NumberField({
   );
 }
 
+function MapExclusionPicker({
+  excludedMaps,
+  onChange,
+}: {
+  excludedMaps: string[];
+  onChange: (excluded: string[]) => void;
+}) {
+  const activeMaps = MAPS.filter((m) => m.active);
+  const excluded = new Set(excludedMaps);
+
+  const toggle = (mapId: string) => {
+    if (excluded.has(mapId)) {
+      onChange(excludedMaps.filter((id) => id !== mapId));
+    } else if (excluded.size < 3) {
+      onChange([...excludedMaps, mapId]);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-medium text-muted-foreground">
+        Exclude Maps ({excluded.size}/3)
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        {activeMaps.map((map) => {
+          const isExcluded = excluded.has(map.id);
+          return (
+            <button
+              key={map.id}
+              type="button"
+              onClick={() => toggle(map.id)}
+              className={`rounded-lg border px-3 py-2 text-xs text-left transition-colors ${
+                isExcluded
+                  ? "border-destructive bg-destructive/10 text-destructive line-through"
+                  : "border-border bg-input text-foreground hover:bg-secondary"
+              } ${!isExcluded && excluded.size >= 3 ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              {map.name}
+            </button>
+          );
+        })}
+      </div>
+      {excluded.size !== 3 && (
+        <p className="text-xs text-muted-foreground">
+          Select exactly 3 maps to exclude
+        </p>
+      )}
+    </div>
+  );
+}
+
 function RoomLinks({ result }: { result: CreateRoomResponse }) {
   return (
     <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 flex flex-col gap-5">
@@ -206,8 +220,8 @@ function RoomLinks({ result }: { result: CreateRoomResponse }) {
         Share these links with the players:
       </p>
 
-      <RoomLink label="Blue Team" url={result.blueUrl} colorClass="text-team-blue" />
-      <RoomLink label="Red Team" url={result.redUrl} colorClass="text-team-red" />
+      <RoomLink label="Side Select" url={result.blueUrl} colorClass="text-team-blue" />
+      <RoomLink label="Map Select" url={result.redUrl} colorClass="text-team-red" />
       <RoomLink label="Spectator" url={result.spectatorUrl} colorClass="text-muted-foreground" />
     </div>
   );

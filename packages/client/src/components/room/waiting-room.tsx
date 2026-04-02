@@ -43,12 +43,12 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
       {/* Connection status */}
       <div className="flex flex-col gap-3">
         <ConnectionStatus
-          label="Blue Team"
+          label="Side Select"
           connected={room.blueConnected}
           colorClass="text-team-blue"
         />
         <ConnectionStatus
-          label="Red Team"
+          label="Map Select"
           connected={room.redConnected}
           colorClass="text-team-red"
         />
@@ -64,18 +64,16 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
         <p className="text-xs uppercase tracking-wider text-muted-foreground">
           Share these links
         </p>
-        <CopyLink label="Blue" url={`${baseUrl}?role=blue`} />
-        <CopyLink label="Red" url={`${baseUrl}?role=red`} />
+        <CopyLink label="Side Select" url={`${baseUrl}?role=blue`} />
+        <CopyLink label="Map Select" url={`${baseUrl}?role=red`} />
         <CopyLink label="Spectator" url={`${baseUrl}?role=spectator`} />
       </div>
 
       {/* Config summary */}
       <div className="rounded-lg bg-secondary/50 p-3 text-xs text-muted-foreground">
         <p>
-          Mode: {room.config.draftMode} | Bans: {room.config.banMode} (
-          {room.config.numBans}) | Picks: {room.config.numPicks} | Mirror:{" "}
-          {room.config.mirrorRule.replace("_", " ")} | Timer:{" "}
-          {room.config.timerSeconds}s | Map Bans: {room.config.numMapBans}
+          Format: {room.config.mapBanMode.toUpperCase()} | Bans: {room.config.numBans} | Picks:{" "}
+          {room.config.numPicks} | Timer: {room.config.timerSeconds}s
         </p>
       </div>
 

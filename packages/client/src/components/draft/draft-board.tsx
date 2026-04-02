@@ -15,6 +15,7 @@ interface DraftBoardProps {
   timerRemaining: number;
   selectedId: string | null;
   onBanMap?: (mapId: string) => void;
+  onPickMap?: (mapId: string) => void;
   onPickAwakening?: (awakeningId: string) => void;
   onSelectCharacter?: (characterId: string) => void;
   onLockIn?: () => void;
@@ -27,6 +28,7 @@ export function DraftBoard({
   timerRemaining,
   selectedId,
   onBanMap,
+  onPickMap,
   onPickAwakening,
   onSelectCharacter,
   onLockIn,
@@ -66,7 +68,7 @@ export function DraftBoard({
 
       {/* Phase-specific UI */}
       {draft.phase === "MAP_BAN" && (
-        <MapBanPhase draft={draft} myTeam={myTeam} onBanMap={onBanMap} />
+        <MapBanPhase draft={draft} myTeam={myTeam} onBanMap={onBanMap} onPickMap={onPickMap} />
       )}
       {draft.phase === "AWAKENING_REVEAL" && (
         <AwakeningPhase
@@ -103,7 +105,7 @@ function TurnIndicator({
     const label =
       currentTurn === "both"
         ? "Both teams picking"
-        : `${currentTurn === "blue" ? "Blue" : "Red"} team's turn`;
+        : `${currentTurn === "blue" ? "Side Select" : "Map Select"}'s turn`;
     return <p className="text-sm text-muted-foreground">{label}</p>;
   }
 

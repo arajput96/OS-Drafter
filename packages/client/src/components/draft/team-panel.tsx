@@ -53,7 +53,7 @@ export function TeamPanel({ team, draft, className }: TeamPanelProps) {
           team === "blue" ? "text-team-blue" : "text-team-red",
         )}
       >
-        {team === "blue" ? "Blue Team" : "Red Team"}
+        {team === "blue" ? "Side Select" : "Map Select"}
       </div>
 
       {/* Awakening */}

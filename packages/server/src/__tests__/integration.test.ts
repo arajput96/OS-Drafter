@@ -15,16 +15,20 @@ import { registry } from "../RoomRegistry.js";
 // ── Shared test fixtures ──
 
 const BASE_CONFIG: DraftConfig = {
-  draftMode: "alternating",
-  banMode: "staggered",
+  draftMode: "snake",
+  banMode: "simultaneous",
   mirrorRule: "no_mirrors",
   timerSeconds: 30,
   numBans: 2,
   numPicks: 3,
-  numMapBans: 1,
+  mapBanMode: "bo1",
+  blueMapRole: "side_select",
+  excludedMaps: MAPS.filter((m) => m.active).slice(0, 3).map((m) => m.id),
 };
 
 const activeMaps = MAPS.filter((m) => m.active);
+// Maps that are in the pool after exclusion (first 3 active maps are excluded)
+const poolMaps = activeMaps.slice(3);
 const characterIds = CHARACTERS.map((c) => c.id);
 
 // ── Helpers ──
@@ -103,28 +107,23 @@ async function runFullDraft(
     const step = turnOrder[i];
     const socket = step.team === "blue" ? blue : step.team === "red" ? red : null;
 
-    if (step.type === "map_ban") {
-      const available = activeMaps
-        .map((m) => m.id)
+    if (step.type === "map_ban" || step.type === "map_pick") {
+      const available = state.mapBans.mapPool
         .filter(
-          (id) =>
+          (id: string) =>
             !state.mapBans.blueBans.includes(id) &&
-            !state.mapBans.redBans.includes(id),
+            !state.mapBans.redBans.includes(id) &&
+            !state.mapBans.bluePicks.includes(id) &&
+            !state.mapBans.redPicks.includes(id),
         );
 
-      if (step.team === "both") {
-        // Simultaneous: submit blue first, then red
-        const p1 = waitForDraftState(blue);
-        blue.emit("draft:ban-map", available[0]);
-        await p1; // pending state
-        const p2 = waitForDraftState(blue);
-        red.emit("draft:ban-map", available[1] ?? available[0]);
-        state = await p2; // committed state
+      const p = waitForDraftState(blue);
+      if (step.type === "map_pick") {
+        socket!.emit("draft:pick-map", available[0]);
       } else {
-        const p = waitForDraftState(blue);
         socket!.emit("draft:ban-map", available[0]);
-        state = await p;
       }
+      state = await p;
     } else if (step.type === "awakening_pick") {
       const pair = state.awakeningReveal.revealedPair!;
       const choice = step.team === "blue"
@@ -375,7 +374,7 @@ describe("Full Draft Flow", () => {
 
     // Blue bans a map - red should receive the action
     const actionP = waitForEvent(red, "draft:action");
-    blue.emit("draft:ban-map", activeMaps[0].id);
+    blue.emit("draft:ban-map", poolMaps[0].id);
     const [action] = await actionP;
 
     expect(action.type).toBe("map_ban");
@@ -387,7 +386,7 @@ describe("Full Draft Flow", () => {
     const red = client();
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
-    const roomId = await createRoom(blue, { ...BASE_CONFIG, numMapBans: 1 });
+    const roomId = await createRoom(blue, BASE_CONFIG);
     await joinRed(red, roomId);
 
     const phaseP = waitForEvent(blue, "draft:phase-change");
@@ -456,7 +455,7 @@ describe("Disconnection & Reconnection", () => {
 
     // Do a map ban before disconnect
     const blueStateP = waitForDraftState(blue);
-    blue.emit("draft:ban-map", activeMaps[0].id);
+    blue.emit("draft:ban-map", poolMaps[0].id);
     await blueStateP;
 
     // Blue disconnects
@@ -471,7 +470,7 @@ describe("Disconnection & Reconnection", () => {
     blue2.emit("room:join", roomId, "blue");
     const catchUpState = await draftStateP;
 
-    expect(catchUpState.mapBans.blueBans).toContain(activeMaps[0].id);
+    expect(catchUpState.mapBans.blueBans).toContain(poolMaps[0].id);
   });
 
   it("should clean up room when all participants disconnect", async () => {
@@ -588,7 +587,6 @@ describe("Simultaneous Mode", () => {
     const config: DraftConfig = {
       ...BASE_CONFIG,
       banMode: "simultaneous",
-      numMapBans: 0,
     };
 
     const roomId = await createRoom(blue, config);
@@ -596,6 +594,20 @@ describe("Simultaneous Mode", () => {
 
     const { blueState } = await startDraft(blue, red);
     let state = blueState;
+
+    // Skip through map phase
+    const mapSteps = state.turnOrder.filter((s: any) => s.phase === "MAP_BAN");
+    const pool = [...state.mapBans.mapPool];
+    let mapIdx = 0;
+    for (const step of mapSteps) {
+      const p = waitForDraftState(blue);
+      if (step.type === "map_pick") {
+        (step.team === "blue" ? blue : red).emit("draft:pick-map", pool[mapIdx++]!);
+      } else {
+        (step.team === "blue" ? blue : red).emit("draft:ban-map", pool[mapIdx++]!);
+      }
+      state = await p;
+    }
 
     // Skip through awakening if present
     if (state.phase === "AWAKENING_REVEAL") {
@@ -643,13 +655,21 @@ describe("Simultaneous Mode", () => {
     await joinRed(red, roomId);
     await startDraft(blue, red);
 
-    // Complete map bans to get to CHAR_BAN
+    // Complete map phase (Bo1: blue bans 3, red picks 1)
     let p = waitForDraftState(blue);
-    blue.emit("draft:ban-map", activeMaps[0].id);
+    blue.emit("draft:ban-map", poolMaps[0].id);
     let state = await p;
 
     p = waitForDraftState(blue);
-    red.emit("draft:ban-map", activeMaps[1].id);
+    blue.emit("draft:ban-map", poolMaps[1].id);
+    state = await p;
+
+    p = waitForDraftState(blue);
+    blue.emit("draft:ban-map", poolMaps[2].id);
+    state = await p;
+
+    p = waitForDraftState(blue);
+    red.emit("draft:pick-map", poolMaps[3].id);
     state = await p;
 
     // Awakening picks
@@ -758,7 +778,7 @@ describe("Validation & Errors", () => {
     await startDraft(blue, red);
 
     const errorP = waitForError(spec);
-    spec.emit("draft:ban-map", activeMaps[0].id);
+    spec.emit("draft:ban-map", poolMaps[0].id);
     const msg = await errorP;
     expect(msg).toContain("Spectators");
   });

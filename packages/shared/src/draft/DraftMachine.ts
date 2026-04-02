@@ -8,6 +8,7 @@ import type {
   TurnStep,
 } from "../types.js";
 import { generateTurnOrder } from "./turnOrders.js";
+import { resolveMapRoles } from "./mapRoles.js";
 
 /**
  * Pure, synchronous draft state machine. No I/O, no timers.
@@ -27,19 +28,25 @@ export class DraftMachine {
     awakeningIds: string[] = [],
   ) {
     this.characterIds = [...characterIds];
-    this.mapIds = [...mapIds];
     this.awakeningIds = [...awakeningIds];
     this.hasAwakenings = awakeningIds.length >= 2;
+
+    // Filter excluded maps from the pool
+    const excluded = new Set(config.excludedMaps ?? []);
+    this.mapIds = mapIds.filter((id) => !excluded.has(id));
 
     const turnOrder = generateTurnOrder(config, {
       includeAwakenings: this.hasAwakenings,
     });
 
     const mapBans: MapBanState = {
-      mapPool: [...mapIds],
+      mapPool: [...this.mapIds],
       blueBans: [],
       redBans: [],
+      bluePicks: [],
+      redPicks: [],
       selectedMap: null,
+      gameOrder: [null, null, null],
     };
 
     const awakeningReveal: AwakeningRevealState = {
@@ -120,9 +127,9 @@ export class DraftMachine {
   }
 
   getAvailableMaps(): string[] {
-    const { blueBans, redBans } = this.state.mapBans;
-    const banned = [...blueBans, ...redBans];
-    return this.state.mapBans.mapPool.filter((id) => !banned.includes(id));
+    const { blueBans, redBans, bluePicks, redPicks } = this.state.mapBans;
+    const unavailable = [...blueBans, ...redBans, ...bluePicks, ...redPicks];
+    return this.state.mapBans.mapPool.filter((id) => !unavailable.includes(id));
   }
 
   /**
@@ -174,6 +181,39 @@ export class DraftMachine {
       this.state.mapBans.blueBans.push(mapId);
     } else {
       this.state.mapBans.redBans.push(mapId);
+    }
+
+    this.advance();
+    return { ok: true, state: this.state };
+  }
+
+  pickMap(team: Team, mapId: string): DraftResult {
+    const step = this.getCurrentStep();
+    const error = this.validateStep(team, step, "MAP_BAN", "map_pick");
+    if (error) return { ok: false, error };
+
+    const available = this.getAvailableMaps();
+    if (!available.includes(mapId)) {
+      return { ok: false, error: `Map "${mapId}" is not available for picking` };
+    }
+
+    if (team === "blue") {
+      this.state.mapBans.bluePicks.push(mapId);
+    } else {
+      this.state.mapBans.redPicks.push(mapId);
+    }
+
+    // Assign to game order based on map role and mode
+    const { mapBanMode } = this.state.config;
+    if (mapBanMode === "bo1") {
+      this.state.mapBans.selectedMap = mapId;
+    } else if (mapBanMode === "bo3") {
+      const { sideSelect, mapSelect } = resolveMapRoles(this.state.config);
+      if (team === mapSelect) {
+        this.state.mapBans.gameOrder[0] = mapId; // M's pick = game 1
+      } else if (team === sideSelect) {
+        this.state.mapBans.gameOrder[1] = mapId; // S's pick = game 2
+      }
     }
 
     this.advance();
@@ -314,6 +354,8 @@ export class DraftMachine {
     switch (step.type) {
       case "map_ban":
         return this.banMap(team, randomId);
+      case "map_pick":
+        return this.pickMap(team, randomId);
       case "awakening_pick":
         return this.pickAwakening(team, randomId);
       case "ban":
@@ -408,7 +450,10 @@ export class DraftMachine {
     const nextStep = this.state.turnOrder[this.state.turnIndex]!;
 
     if (prevStep?.phase === "MAP_BAN" && nextStep.phase !== "MAP_BAN") {
-      this.selectRandomMap();
+      if (this.state.config.mapBanMode === "bo3") {
+        this.assignRemainingMapToGame3();
+      }
+      // Bo1: selectedMap is already set during pickMap, no action needed
     }
 
     this.applyCurrentStep();
@@ -430,19 +475,21 @@ export class DraftMachine {
     }
   }
 
-  private selectRandomMap(): void {
+  private assignRemainingMapToGame3(): void {
     const available = this.getAvailableMaps();
-    if (available.length > 0) {
-      const idx = Math.floor(Math.random() * available.length);
-      this.state.mapBans.selectedMap = available[idx]!;
+    if (available.length >= 1) {
+      this.state.mapBans.gameOrder[2] = available[0]!;
+      this.state.mapBans.selectedMap = available[0]!;
     }
   }
+
 
   private randomSelection(team: Team, type: string): string | null {
     let pool: string[];
 
     switch (type) {
       case "map_ban":
+      case "map_pick":
         pool = this.getAvailableMaps();
         break;
       case "awakening_pick": {
