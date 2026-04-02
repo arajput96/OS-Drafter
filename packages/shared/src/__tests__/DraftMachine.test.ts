@@ -4,11 +4,28 @@ import type { DraftConfig, Team, DraftMode, BanMode, MirrorRule } from "../types
 
 // Small rosters for focused testing
 const CHARS = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "c10"];
-const MAP_IDS = ["m1", "m2", "m3", "m4", "m5", "m6"];
+const MAP_IDS = ["m1", "m2", "m3", "m4", "m5", "m6", "m7"];
 const AWK_IDS = ["a1", "a2", "a3", "a4"];
 
-function makeConfig(overrides: Partial<DraftConfig> = {}): DraftConfig {
+function makeMapConfig(overrides: Partial<DraftConfig> = {}): DraftConfig {
   return {
+    draftType: "map",
+    draftMode: "snake",
+    banMode: "simultaneous",
+    mirrorRule: "no_mirrors",
+    timerSeconds: 30,
+    numBans: 0,
+    numPicks: 1,
+    mapBanMode: "bo1",
+    blueMapRole: "side_select",
+    excludedMaps: [],
+    ...overrides,
+  };
+}
+
+function makeCharConfig(overrides: Partial<DraftConfig> = {}): DraftConfig {
+  return {
+    draftType: "character",
     draftMode: "snake",
     banMode: "simultaneous",
     mirrorRule: "no_mirrors",
@@ -18,12 +35,17 @@ function makeConfig(overrides: Partial<DraftConfig> = {}): DraftConfig {
     mapBanMode: "bo1",
     blueMapRole: "side_select",
     excludedMaps: [],
+    selectedMapName: "Test Map",
     ...overrides,
   };
 }
 
-function createMachine(overrides: Partial<DraftConfig> = {}): DraftMachine {
-  return new DraftMachine(makeConfig(overrides), CHARS, MAP_IDS, AWK_IDS);
+function createMapMachine(overrides: Partial<DraftConfig> = {}): DraftMachine {
+  return new DraftMachine(makeMapConfig(overrides), [], MAP_IDS, []);
+}
+
+function createCharMachine(overrides: Partial<DraftConfig> = {}): DraftMachine {
+  return new DraftMachine(makeCharConfig(overrides), CHARS, [], AWK_IDS);
 }
 
 /** Helper: run through all map phase steps (bans + picks) */
@@ -43,13 +65,6 @@ function completeMapPhase(machine: DraftMachine): void {
       expect(result.ok).toBe(true);
     }
   }
-}
-
-/** Helper: run through awakening reveal steps */
-function completeAwakenings(machine: DraftMachine): void {
-  const revealed = machine.getState().awakeningReveal.revealedPair!;
-  expect(machine.pickAwakening("blue", revealed[0]).ok).toBe(true);
-  expect(machine.pickAwakening("red", revealed[1]).ok).toBe(true);
 }
 
 /** Helper: run through all character ban steps */
@@ -96,12 +111,12 @@ function completeCharPicks(machine: DraftMachine): void {
 describe("DraftMachine", () => {
   describe("initialization", () => {
     it("starts in WAITING phase", () => {
-      const machine = createMachine();
+      const machine = createMapMachine();
       expect(machine.getState().phase).toBe("WAITING");
     });
 
     it("has empty ban and pick arrays", () => {
-      const machine = createMachine();
+      const machine = createCharMachine();
       const state = machine.getState();
       expect(state.blueTeamBans).toEqual([]);
       expect(state.redTeamBans).toEqual([]);
@@ -110,22 +125,46 @@ describe("DraftMachine", () => {
     });
 
     it("has generated turn order", () => {
-      const machine = createMachine();
+      const machine = createMapMachine();
       expect(machine.getState().turnOrder.length).toBeGreaterThan(0);
     });
   });
 
-  describe("start", () => {
-    it("transitions from WAITING to first phase", () => {
-      const machine = createMachine();
+  describe("map draft - start", () => {
+    it("transitions from WAITING to MAP_BAN", () => {
+      const machine = createMapMachine();
       const result = machine.start();
       expect(result.ok).toBe(true);
       expect(machine.getState().phase).toBe("MAP_BAN");
     });
 
-    it("reveals an awakening pair", () => {
-      const machine = createMachine();
+    it("rejects start when already started", () => {
+      const machine = createMapMachine();
       machine.start();
+      const result = machine.start();
+      expect(result.ok).toBe(false);
+    });
+  });
+
+  describe("character draft - start", () => {
+    it("transitions from WAITING to CHAR_BAN", () => {
+      const machine = createCharMachine();
+      const result = machine.start();
+      expect(result.ok).toBe(true);
+      expect(machine.getState().phase).toBe("CHAR_BAN");
+    });
+
+    it("skips to CHAR_PICK when banMode is none", () => {
+      const machine = createCharMachine({ banMode: "none" });
+      machine.start();
+      expect(machine.getState().phase).toBe("CHAR_PICK");
+    });
+  });
+
+  describe("awakening reveal", () => {
+    it("reveals a random pair of awakenings", () => {
+      const machine = createCharMachine();
+      machine.revealAwakenings();
       const pair = machine.getState().awakeningReveal.revealedPair;
       expect(pair).not.toBeNull();
       expect(pair).toHaveLength(2);
@@ -133,21 +172,20 @@ describe("DraftMachine", () => {
       expect(AWK_IDS).toContain(pair![1]);
     });
 
-    it("rejects start when already started", () => {
-      const machine = createMachine();
-      machine.start();
-      const result = machine.start();
-      expect(result.ok).toBe(false);
+    it("does not reveal awakenings if fewer than 2 available", () => {
+      const machine = new DraftMachine(makeCharConfig(), CHARS, [], ["a1"]);
+      machine.revealAwakenings();
+      expect(machine.getState().awakeningReveal.revealedPair).toBeNull();
     });
   });
 
-  describe("map phase - Bo1", () => {
+  describe("map draft - Bo1", () => {
     let machine: DraftMachine;
 
     beforeEach(() => {
       // Bo1 default: blue = side_select, red = map_select
       // Flow: blue ban, blue ban, blue ban, red pick
-      machine = createMachine();
+      machine = createMapMachine();
       machine.start();
     });
 
@@ -191,69 +229,42 @@ describe("DraftMachine", () => {
       expect(result.ok).toBe(false);
     });
 
-    it("transitions to AWAKENING_REVEAL after map phase completes", () => {
+    it("transitions to COMPLETE after map phase completes", () => {
       completeMapPhase(machine);
-      expect(machine.getState().phase).toBe("AWAKENING_REVEAL");
+      expect(machine.getState().phase).toBe("COMPLETE");
+      expect(machine.isComplete()).toBe(true);
     });
   });
 
-  describe("awakening reveal phase", () => {
+  describe("map draft - Bo3", () => {
     let machine: DraftMachine;
 
     beforeEach(() => {
-      machine = createMachine();
+      machine = createMapMachine({ mapBanMode: "bo3" });
       machine.start();
+    });
+
+    it("completes with game order filled", () => {
       completeMapPhase(machine);
+      expect(machine.getState().phase).toBe("COMPLETE");
+      const gameOrder = machine.getState().mapBans.gameOrder;
+      // All 3 games should have maps
+      expect(gameOrder[0]).toBeTruthy();
+      expect(gameOrder[1]).toBeTruthy();
+      expect(gameOrder[2]).toBeTruthy();
     });
 
-    it("allows blue to pick a revealed awakening", () => {
-      const revealed = machine.getState().awakeningReveal.revealedPair!;
-      const result = machine.pickAwakening("blue", revealed[0]);
-      expect(result.ok).toBe(true);
-      expect(machine.getState().awakeningReveal.blueChoice).toBe(revealed[0]);
-    });
-
-    it("rejects picking an unrevealed awakening", () => {
-      const revealed = machine.getState().awakeningReveal.revealedPair!;
-      const unrevealed = AWK_IDS.find((id) => !revealed.includes(id))!;
-      const result = machine.pickAwakening("blue", unrevealed);
-      expect(result.ok).toBe(false);
-    });
-
-    it("rejects red picking before blue", () => {
-      const revealed = machine.getState().awakeningReveal.revealedPair!;
-      const result = machine.pickAwakening("red", revealed[0]);
-      expect(result.ok).toBe(false);
-    });
-
-    it("gives red the other awakening if red picks the same as blue", () => {
-      const revealed = machine.getState().awakeningReveal.revealedPair!;
-      machine.pickAwakening("blue", revealed[0]);
-      // Red tries to pick the same one blue chose
-      const result = machine.pickAwakening("red", revealed[0]);
-      expect(result.ok).toBe(true);
-      // Red should get the alternative
-      expect(machine.getState().awakeningReveal.redChoice).toBe(revealed[1]);
-    });
-
-    it("transitions to CHAR_BAN after both teams pick", () => {
-      completeAwakenings(machine);
-      expect(machine.getState().phase).toBe("CHAR_BAN");
-    });
-  });
-
-  describe("no awakenings", () => {
-    it("skips AWAKENING_REVEAL when no awakenings provided", () => {
-      const machine = new DraftMachine(
-        makeConfig({ banMode: "none" }),
-        CHARS,
-        MAP_IDS,
-        [], // no awakenings
-      );
-      machine.start();
-      completeMapPhase(machine);
-      // Should skip straight to CHAR_PICK
-      expect(machine.getState().phase).toBe("CHAR_PICK");
+    it("filters excluded maps from the pool", () => {
+      const m = createMapMachine({
+        mapBanMode: "bo3",
+        excludedMaps: ["m1", "m2", "m3"],
+      });
+      m.start();
+      const pool = m.getState().mapBans.mapPool;
+      expect(pool).not.toContain("m1");
+      expect(pool).not.toContain("m2");
+      expect(pool).not.toContain("m3");
+      expect(pool).toHaveLength(4);
     });
   });
 
@@ -262,10 +273,8 @@ describe("DraftMachine", () => {
       let machine: DraftMachine;
 
       beforeEach(() => {
-        machine = createMachine({ banMode: "staggered", numBans: 1 });
+        machine = createCharMachine({ banMode: "staggered", numBans: 1 });
         machine.start();
-        completeMapPhase(machine);
-        completeAwakenings(machine);
       });
 
       it("allows blue to ban first", () => {
@@ -301,10 +310,8 @@ describe("DraftMachine", () => {
       let machine: DraftMachine;
 
       beforeEach(() => {
-        machine = createMachine({ banMode: "simultaneous", numBans: 1 });
+        machine = createCharMachine({ banMode: "simultaneous", numBans: 1 });
         machine.start();
-        completeMapPhase(machine);
-        completeAwakenings(machine);
       });
 
       it("accepts ban from either team first", () => {
@@ -322,7 +329,6 @@ describe("DraftMachine", () => {
         machine.banCharacter("blue", "c1");
         machine.banCharacter("red", "c2");
         expect(machine.getState().pendingActions).toBeNull();
-        // Should have moved past CHAR_BAN
         expect(machine.getState().blueTeamBans).toContain("c1");
         expect(machine.getState().redTeamBans).toContain("c2");
       });
@@ -342,10 +348,8 @@ describe("DraftMachine", () => {
 
     describe("none mode", () => {
       it("skips directly to CHAR_PICK", () => {
-        const machine = createMachine({ banMode: "none" });
+        const machine = createCharMachine({ banMode: "none" });
         machine.start();
-        completeMapPhase(machine);
-        completeAwakenings(machine);
         expect(machine.getState().phase).toBe("CHAR_PICK");
       });
     });
@@ -356,10 +360,8 @@ describe("DraftMachine", () => {
       let machine: DraftMachine;
 
       beforeEach(() => {
-        machine = createMachine({ draftMode: "alternating", banMode: "none" });
+        machine = createCharMachine({ draftMode: "alternating", banMode: "none" });
         machine.start();
-        completeMapPhase(machine);
-        completeAwakenings(machine);
       });
 
       it("follows B, R, B, R, B, R order", () => {
@@ -390,10 +392,8 @@ describe("DraftMachine", () => {
       let machine: DraftMachine;
 
       beforeEach(() => {
-        machine = createMachine({ draftMode: "snake", banMode: "none" });
+        machine = createCharMachine({ draftMode: "snake", banMode: "none" });
         machine.start();
-        completeMapPhase(machine);
-        completeAwakenings(machine);
       });
 
       it("follows B, R, R, B, B, R order", () => {
@@ -417,14 +417,12 @@ describe("DraftMachine", () => {
       let machine: DraftMachine;
 
       beforeEach(() => {
-        machine = createMachine({
+        machine = createCharMachine({
           draftMode: "simultaneous",
           banMode: "none",
           mirrorRule: "full_duplicates",
         });
         machine.start();
-        completeMapPhase(machine);
-        completeAwakenings(machine);
       });
 
       it("accepts picks from either team", () => {
@@ -456,44 +454,36 @@ describe("DraftMachine", () => {
 
   describe("mirror rules", () => {
     it("no_mirrors: rejects picking character already picked by either team", () => {
-      const machine = createMachine({
+      const machine = createCharMachine({
         draftMode: "alternating",
         banMode: "none",
         mirrorRule: "no_mirrors",
       });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
       machine.pickCharacter("blue", "c1");
-      // Red cannot pick c1
       const result = machine.pickCharacter("red", "c1");
       expect(result.ok).toBe(false);
     });
 
     it("team_mirrors: allows same character on different teams", () => {
-      const machine = createMachine({
+      const machine = createCharMachine({
         draftMode: "alternating",
         banMode: "none",
         mirrorRule: "team_mirrors",
       });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
       machine.pickCharacter("blue", "c1");
-      // Red CAN pick c1
       const result = machine.pickCharacter("red", "c1");
       expect(result.ok).toBe(true);
     });
 
     it("full_duplicates: allows any character anywhere", () => {
-      const machine = createMachine({
+      const machine = createCharMachine({
         draftMode: "alternating",
         banMode: "none",
         mirrorRule: "full_duplicates",
       });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
       machine.pickCharacter("blue", "c1");
       const result = machine.pickCharacter("red", "c1");
       expect(result.ok).toBe(true);
@@ -502,7 +492,7 @@ describe("DraftMachine", () => {
 
   describe("timer expiry", () => {
     it("auto-selects random map on map ban timeout", () => {
-      const machine = createMachine();
+      const machine = createMapMachine();
       machine.start();
       const result = machine.expireTimer();
       expect(result.ok).toBe(true);
@@ -510,35 +500,28 @@ describe("DraftMachine", () => {
     });
 
     it("auto-selects random character on ban timeout", () => {
-      const machine = createMachine({ banMode: "staggered", numBans: 1 });
+      const machine = createCharMachine({ banMode: "staggered", numBans: 1 });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
       const result = machine.expireTimer();
       expect(result.ok).toBe(true);
       expect(machine.getState().blueTeamBans).toHaveLength(1);
     });
 
     it("auto-selects random character on pick timeout", () => {
-      const machine = createMachine({ banMode: "none" });
+      const machine = createCharMachine({ banMode: "none" });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
       const result = machine.expireTimer();
       expect(result.ok).toBe(true);
       expect(machine.getState().blueTeamPicks).toHaveLength(1);
     });
 
     it("auto-fills both teams in simultaneous mode timeout", () => {
-      const machine = createMachine({
+      const machine = createCharMachine({
         banMode: "simultaneous",
         numBans: 1,
         mirrorRule: "full_duplicates",
       });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
-      // Neither team submits, timer expires
       const result = machine.expireTimer();
       expect(result.ok).toBe(true);
       expect(machine.getState().blueTeamBans).toHaveLength(1);
@@ -546,15 +529,12 @@ describe("DraftMachine", () => {
     });
 
     it("auto-fills only the non-submitting team in simultaneous mode", () => {
-      const machine = createMachine({
+      const machine = createCharMachine({
         banMode: "simultaneous",
         numBans: 1,
         mirrorRule: "full_duplicates",
       });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
-      // Blue submits, red doesn't
       machine.banCharacter("blue", "c1");
       const result = machine.expireTimer();
       expect(result.ok).toBe(true);
@@ -564,63 +544,48 @@ describe("DraftMachine", () => {
   });
 
   describe("completion", () => {
-    it("rejects all actions in COMPLETE phase", () => {
-      const machine = createMachine({ banMode: "none" });
+    it("rejects all actions in COMPLETE phase (map draft)", () => {
+      const machine = createMapMachine();
       machine.start();
       completeMapPhase(machine);
-      completeAwakenings(machine);
+      expect(machine.getState().phase).toBe("COMPLETE");
+      expect(machine.isComplete()).toBe(true);
+      expect(machine.banMap("blue", "m1").ok).toBe(false);
+    });
+
+    it("rejects all actions in COMPLETE phase (character draft)", () => {
+      const machine = createCharMachine({ banMode: "none" });
+      machine.start();
       completeCharPicks(machine);
       expect(machine.getState().phase).toBe("COMPLETE");
       expect(machine.isComplete()).toBe(true);
-
-      expect(machine.banMap("blue", "m1").ok).toBe(false);
       expect(machine.banCharacter("blue", "c1").ok).toBe(false);
       expect(machine.pickCharacter("blue", "c1").ok).toBe(false);
     });
   });
 
   describe("edge cases", () => {
-    it("auto-selects awakening on timer expiry during AWAKENING_REVEAL", () => {
-      const machine = createMachine();
-      machine.start();
-      completeMapPhase(machine);
-      // Timer expires for blue during awakening
-      const result = machine.expireTimer();
-      expect(result.ok).toBe(true);
-      // Blue should have a choice auto-assigned
-      expect(machine.getState().awakeningReveal.blueChoice).toBeTruthy();
-    });
-
     it("skips CHAR_BAN when numBans is 0 with staggered banMode", () => {
-      const machine = createMachine({ numBans: 0, banMode: "staggered" });
+      const machine = createCharMachine({ numBans: 0, banMode: "staggered" });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
-      // Should jump to CHAR_PICK, skipping CHAR_BAN
       expect(machine.getState().phase).toBe("CHAR_PICK");
     });
 
     it("skips CHAR_BAN when numBans is 0 with simultaneous banMode", () => {
-      const machine = createMachine({ numBans: 0, banMode: "simultaneous" });
+      const machine = createCharMachine({ numBans: 0, banMode: "simultaneous" });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
       expect(machine.getState().phase).toBe("CHAR_PICK");
     });
 
     it("handles large numBans (5 per team)", () => {
-      const machine = createMachine({
+      const machine = createCharMachine({
         numBans: 5,
         banMode: "staggered",
         numPicks: 1,
       });
       machine.start();
-      completeMapPhase(machine);
-      completeAwakenings(machine);
-
       expect(machine.getState().phase).toBe("CHAR_BAN");
 
-      // Complete all 10 ban steps (5 per team, staggered)
       const state = machine.getState();
       const banSteps = state.turnOrder.filter((s) => s.phase === "CHAR_BAN");
       expect(banSteps).toHaveLength(10);
@@ -632,29 +597,14 @@ describe("DraftMachine", () => {
         expect(result.ok).toBe(true);
       }
 
-      // All 10 bans should be filled before picks
       const afterBans = machine.getState();
       expect(afterBans.blueTeamBans.filter(Boolean)).toHaveLength(5);
       expect(afterBans.redTeamBans.filter(Boolean)).toHaveLength(5);
       expect(afterBans.phase).toBe("CHAR_PICK");
     });
-
-    it("filters excluded maps from the pool", () => {
-      const machine = createMachine({
-        mapBanMode: "bo3",
-        blueMapRole: "side_select",
-        excludedMaps: ["m1", "m2", "m3"],
-      });
-      machine.start();
-      const pool = machine.getState().mapBans.mapPool;
-      expect(pool).not.toContain("m1");
-      expect(pool).not.toContain("m2");
-      expect(pool).not.toContain("m3");
-      expect(pool).toHaveLength(3);
-    });
   });
 
-  describe("full draft flow - all mode combinations", () => {
+  describe("full character draft flow - all mode combinations", () => {
     const draftModes: DraftMode[] = ["snake", "alternating", "simultaneous"];
     const banModes: BanMode[] = ["simultaneous", "staggered", "none"];
     const mirrorRules: MirrorRule[] = ["no_mirrors", "team_mirrors", "full_duplicates"];
@@ -663,7 +613,7 @@ describe("DraftMachine", () => {
       for (const banMode of banModes) {
         for (const mirrorRule of mirrorRules) {
           it(`completes: ${draftMode} + ${banMode} + ${mirrorRule}`, () => {
-            const machine = createMachine({
+            const machine = createCharMachine({
               draftMode,
               banMode,
               mirrorRule,
@@ -672,8 +622,6 @@ describe("DraftMachine", () => {
             });
 
             machine.start();
-            completeMapPhase(machine);
-            completeAwakenings(machine);
             if (banMode !== "none") {
               completeCharBans(machine);
             }

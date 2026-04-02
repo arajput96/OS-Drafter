@@ -5,59 +5,42 @@ import { resolveMapRoles } from "./mapRoles.js";
  * Generates the full turn order for a draft as a flat array of steps.
  * The draft machine walks through this array sequentially.
  *
- * Flow: MAP_BAN → AWAKENING_REVEAL → CHAR_BAN → CHAR_PICK
+ * Map drafts:       MAP_BAN → COMPLETE
+ * Character drafts: CHAR_BAN → CHAR_PICK → COMPLETE
  */
-export function generateTurnOrder(
-  config: DraftConfig,
-  options: { includeAwakenings?: boolean } = {},
-): TurnStep[] {
-  const { includeAwakenings = true } = options;
+export function generateTurnOrder(config: DraftConfig): TurnStep[] {
   const steps: TurnStep[] = [];
 
-  // ── Map Ban Phase ──
-  if (config.mapBanMode === "bo3") {
-    const { sideSelect, mapSelect } = resolveMapRoles(config);
-    // S ban, M ban, S pick [game 2], M pick [game 1], S ban, M ban
-    steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 0 });
-    steps.push({ phase: "MAP_BAN", team: mapSelect, type: "map_ban", index: 0 });
-    steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_pick", index: 0 });
-    steps.push({ phase: "MAP_BAN", team: mapSelect, type: "map_pick", index: 1 });
-    steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 1 });
-    steps.push({ phase: "MAP_BAN", team: mapSelect, type: "map_ban", index: 1 });
+  if (config.draftType === "map") {
+    // ── Map Ban Phase only ──
+    if (config.mapBanMode === "bo3") {
+      const { sideSelect, mapSelect } = resolveMapRoles(config);
+      // S ban, M ban, S pick [game 2], M pick [game 1], S ban, M ban
+      steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 0 });
+      steps.push({ phase: "MAP_BAN", team: mapSelect, type: "map_ban", index: 0 });
+      steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_pick", index: 0 });
+      steps.push({ phase: "MAP_BAN", team: mapSelect, type: "map_pick", index: 1 });
+      steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 1 });
+      steps.push({ phase: "MAP_BAN", team: mapSelect, type: "map_ban", index: 1 });
+    } else {
+      // Bo1: S bans 3 maps, then M picks 1
+      const { sideSelect, mapSelect } = resolveMapRoles(config);
+      steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 0 });
+      steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 1 });
+      steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 2 });
+      steps.push({ phase: "MAP_BAN", team: mapSelect, type: "map_pick", index: 0 });
+    }
   } else {
-    // Bo1: S bans 3 maps, then M picks 1
-    const { sideSelect, mapSelect } = resolveMapRoles(config);
-    steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 0 });
-    steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 1 });
-    steps.push({ phase: "MAP_BAN", team: sideSelect, type: "map_ban", index: 2 });
-    steps.push({ phase: "MAP_BAN", team: mapSelect, type: "map_pick", index: 0 });
-  }
+    // ── Character Ban Phase ──
+    if (config.banMode !== "none") {
+      const banSteps = generateBanSteps(config.banMode, config.numBans);
+      steps.push(...banSteps);
+    }
 
-  // ── Awakening Reveal Phase (blue picks first, then red) ──
-  if (includeAwakenings) {
-    steps.push({
-      phase: "AWAKENING_REVEAL",
-      team: "blue",
-      type: "awakening_pick",
-      index: 0,
-    });
-    steps.push({
-      phase: "AWAKENING_REVEAL",
-      team: "red",
-      type: "awakening_pick",
-      index: 1,
-    });
+    // ── Character Pick Phase ──
+    const pickSteps = generatePickSteps(config.draftMode, config.numPicks);
+    steps.push(...pickSteps);
   }
-
-  // ── Character Ban Phase ──
-  if (config.banMode !== "none") {
-    const banSteps = generateBanSteps(config.banMode, config.numBans);
-    steps.push(...banSteps);
-  }
-
-  // ── Character Pick Phase ──
-  const pickSteps = generatePickSteps(config.draftMode, config.numPicks);
-  steps.push(...pickSteps);
 
   return steps;
 }

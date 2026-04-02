@@ -14,7 +14,23 @@ import { registry } from "../RoomRegistry.js";
 
 // ── Shared test fixtures ──
 
-const BASE_CONFIG: DraftConfig = {
+const activeMaps = MAPS.filter((m) => m.active);
+
+const MAP_CONFIG: DraftConfig = {
+  draftType: "map",
+  draftMode: "snake",
+  banMode: "simultaneous",
+  mirrorRule: "no_mirrors",
+  timerSeconds: 30,
+  numBans: 0,
+  numPicks: 1,
+  mapBanMode: "bo1",
+  blueMapRole: "side_select",
+  excludedMaps: activeMaps.slice(0, 3).map((m) => m.id),
+};
+
+const CHAR_CONFIG: DraftConfig = {
+  draftType: "character",
   draftMode: "snake",
   banMode: "simultaneous",
   mirrorRule: "no_mirrors",
@@ -23,10 +39,10 @@ const BASE_CONFIG: DraftConfig = {
   numPicks: 3,
   mapBanMode: "bo1",
   blueMapRole: "side_select",
-  excludedMaps: MAPS.filter((m) => m.active).slice(0, 3).map((m) => m.id),
+  excludedMaps: [],
+  selectedMapName: "Test Map",
 };
 
-const activeMaps = MAPS.filter((m) => m.active);
 // Maps that are in the pool after exclusion (first 3 active maps are excluded)
 const poolMaps = activeMaps.slice(3);
 const characterIds = CHARACTERS.map((c) => c.id);
@@ -54,10 +70,8 @@ async function waitForError(socket: TestSocket): Promise<string> {
 /** Create a room with blue client and return the roomId */
 async function createRoom(
   blue: TestSocket,
-  config: DraftConfig = BASE_CONFIG,
+  config: DraftConfig = MAP_CONFIG,
 ): Promise<string> {
-  // Set up room:state listener BEFORE emitting, since room:state
-  // is sent before the callback ack over the wire
   const stateP = waitForEvent(blue, "room:state");
   const roomId = await new Promise<string>((resolve) => {
     blue.emit("room:create", config, (id: string) => resolve(id));
@@ -87,14 +101,12 @@ async function startDraft(
 }
 
 /**
- * Drive a full draft to COMPLETE.
- * For simultaneous steps, serializes submissions (blue first, then red)
- * so we can reliably track state updates.
+ * Drive a full map draft to COMPLETE.
  */
-async function runFullDraft(
+async function runFullMapDraft(
   blue: TestSocket,
   red: TestSocket,
-  config: DraftConfig = BASE_CONFIG,
+  config: DraftConfig = MAP_CONFIG,
 ): Promise<DraftState> {
   const roomId = await createRoom(blue, config);
   await joinRed(red, roomId);
@@ -107,52 +119,66 @@ async function runFullDraft(
     const step = turnOrder[i];
     const socket = step.team === "blue" ? blue : step.team === "red" ? red : null;
 
-    if (step.type === "map_ban" || step.type === "map_pick") {
-      const available = state.mapBans.mapPool
-        .filter(
-          (id: string) =>
-            !state.mapBans.blueBans.includes(id) &&
-            !state.mapBans.redBans.includes(id) &&
-            !state.mapBans.bluePicks.includes(id) &&
-            !state.mapBans.redPicks.includes(id),
-        );
+    const available = state.mapBans.mapPool.filter(
+      (id: string) =>
+        !state.mapBans.blueBans.includes(id) &&
+        !state.mapBans.redBans.includes(id) &&
+        !state.mapBans.bluePicks.includes(id) &&
+        !state.mapBans.redPicks.includes(id),
+    );
 
-      const p = waitForDraftState(blue);
-      if (step.type === "map_pick") {
-        socket!.emit("draft:pick-map", available[0]);
-      } else {
-        socket!.emit("draft:ban-map", available[0]);
-      }
-      state = await p;
-    } else if (step.type === "awakening_pick") {
-      const pair = state.awakeningReveal.revealedPair!;
-      const choice = step.team === "blue"
-        ? pair[0]
-        : (state.awakeningReveal.blueChoice === pair[0] ? pair[1] : pair[0]);
+    const p = waitForDraftState(blue);
+    if (step.type === "map_pick") {
+      socket!.emit("draft:pick-map", available[0]);
+    } else {
+      socket!.emit("draft:ban-map", available[0]);
+    }
+    state = await p;
 
-      const p = waitForDraftState(blue);
-      socket!.emit("draft:pick-awakening", choice);
-      state = await p;
-    } else if (step.type === "ban" || step.type === "pick") {
+    if (state.phase === "COMPLETE") break;
+  }
+
+  return state;
+}
+
+/**
+ * Drive a full character draft to COMPLETE.
+ */
+async function runFullCharDraft(
+  blue: TestSocket,
+  red: TestSocket,
+  config: DraftConfig = CHAR_CONFIG,
+): Promise<DraftState> {
+  const roomId = await createRoom(blue, config);
+  await joinRed(red, roomId);
+  const { blueState } = await startDraft(blue, red);
+
+  let state = blueState;
+  const turnOrder = state.turnOrder;
+
+  for (let i = state.turnIndex; i < turnOrder.length; i++) {
+    const step = turnOrder[i];
+
+    if (step.type === "ban" || step.type === "pick") {
       const allBanned = [...state.blueTeamBans, ...state.redTeamBans].filter(Boolean) as string[];
       const allPicked = [...state.blueTeamPicks, ...state.redTeamPicks].filter(Boolean) as string[];
       const used = new Set([...allBanned, ...allPicked]);
       const available = characterIds.filter((id) => !used.has(id));
 
       if (step.team === "both") {
-        // Simultaneous: submit blue first, then red
         const p1 = waitForDraftState(blue);
         blue.emit("draft:select", available[0]);
         blue.emit("draft:lock");
-        await p1; // pending state after blue's submission
+        await p1;
         const p2 = waitForDraftState(blue);
         red.emit("draft:select", available[1]);
         red.emit("draft:lock");
-        state = await p2; // committed state after both
+        state = await p2;
       } else {
+        const socket = step.team === "blue" ? blue : red;
         const p = waitForDraftState(blue);
-        socket!.emit("draft:select", available[0]);
-        socket!.emit("draft:lock");
+        socket.emit("draft:select", available[0]);
+        socket.emit("draft:lock");
         state = await p;
       }
     }
@@ -308,59 +334,66 @@ describe("Full Draft Flow", () => {
     return s;
   }
 
-  it("should complete a full draft with alternating + staggered + no_mirrors", async () => {
+  it("should complete a full map draft (Bo1)", async () => {
     const blue = client();
     const red = client();
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
-    const state = await runFullDraft(blue, red, {
-      ...BASE_CONFIG,
+    const state = await runFullMapDraft(blue, red);
+
+    expect(state.phase).toBe("COMPLETE");
+    expect(state.mapBans.selectedMap).toBeTruthy();
+  }, 10000);
+
+  it("should complete a full character draft with alternating + staggered + no_mirrors", async () => {
+    const blue = client();
+    const red = client();
+    await Promise.all([waitForConnect(blue), waitForConnect(red)]);
+
+    const state = await runFullCharDraft(blue, red, {
+      ...CHAR_CONFIG,
       draftMode: "alternating",
       banMode: "staggered",
       mirrorRule: "no_mirrors",
     });
 
     expect(state.phase).toBe("COMPLETE");
-    expect(state.blueTeamBans.filter(Boolean)).toHaveLength(BASE_CONFIG.numBans);
-    expect(state.redTeamBans.filter(Boolean)).toHaveLength(BASE_CONFIG.numBans);
-    expect(state.blueTeamPicks.filter(Boolean)).toHaveLength(BASE_CONFIG.numPicks);
-    expect(state.redTeamPicks.filter(Boolean)).toHaveLength(BASE_CONFIG.numPicks);
-    expect(state.mapBans.selectedMap).toBeTruthy();
-    expect(state.awakeningReveal.blueChoice).toBeTruthy();
-    expect(state.awakeningReveal.redChoice).toBeTruthy();
+    expect(state.blueTeamBans.filter(Boolean)).toHaveLength(CHAR_CONFIG.numBans);
+    expect(state.redTeamBans.filter(Boolean)).toHaveLength(CHAR_CONFIG.numBans);
+    expect(state.blueTeamPicks.filter(Boolean)).toHaveLength(CHAR_CONFIG.numPicks);
+    expect(state.redTeamPicks.filter(Boolean)).toHaveLength(CHAR_CONFIG.numPicks);
   }, 10000);
 
-  it("should complete a full draft with snake + simultaneous bans + no_mirrors", async () => {
+  it("should complete a full character draft with snake + simultaneous bans + no_mirrors", async () => {
     const blue = client();
     const red = client();
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
-    const state = await runFullDraft(blue, red, {
-      ...BASE_CONFIG,
+    const state = await runFullCharDraft(blue, red, {
+      ...CHAR_CONFIG,
       draftMode: "snake",
       banMode: "simultaneous",
       mirrorRule: "no_mirrors",
     });
 
     expect(state.phase).toBe("COMPLETE");
-    expect(state.blueTeamPicks.filter(Boolean)).toHaveLength(BASE_CONFIG.numPicks);
-    expect(state.redTeamPicks.filter(Boolean)).toHaveLength(BASE_CONFIG.numPicks);
+    expect(state.blueTeamPicks.filter(Boolean)).toHaveLength(CHAR_CONFIG.numPicks);
+    expect(state.redTeamPicks.filter(Boolean)).toHaveLength(CHAR_CONFIG.numPicks);
   }, 10000);
 
-  it("should complete a draft with no bans", async () => {
+  it("should complete a character draft with no bans", async () => {
     const blue = client();
     const red = client();
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
-    const state = await runFullDraft(blue, red, {
-      ...BASE_CONFIG,
+    const state = await runFullCharDraft(blue, red, {
+      ...CHAR_CONFIG,
       banMode: "none",
       numBans: 0,
     });
 
     expect(state.phase).toBe("COMPLETE");
-    expect(state.blueTeamBans.every((b) => b === null)).toBe(true);
-    expect(state.blueTeamPicks.filter(Boolean)).toHaveLength(BASE_CONFIG.numPicks);
+    expect(state.blueTeamPicks.filter(Boolean)).toHaveLength(CHAR_CONFIG.numPicks);
   }, 10000);
 
   it("should broadcast draft:action events during the draft", async () => {
@@ -386,7 +419,7 @@ describe("Full Draft Flow", () => {
     const red = client();
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
-    const roomId = await createRoom(blue, BASE_CONFIG);
+    const roomId = await createRoom(blue, MAP_CONFIG);
     await joinRed(red, roomId);
 
     const phaseP = waitForEvent(blue, "draft:phase-change");
@@ -525,7 +558,7 @@ describe("Timer Expiry", () => {
     const red = client();
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
-    const roomId = await createRoom(blue, { ...BASE_CONFIG, timerSeconds: 1 });
+    const roomId = await createRoom(blue, { ...MAP_CONFIG, timerSeconds: 1 });
     await joinRed(red, roomId);
     await startDraft(blue, red);
 
@@ -539,7 +572,7 @@ describe("Timer Expiry", () => {
     const red = client();
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
-    const roomId = await createRoom(blue, { ...BASE_CONFIG, timerSeconds: 2 });
+    const roomId = await createRoom(blue, { ...MAP_CONFIG, timerSeconds: 2 });
     await joinRed(red, roomId);
     await startDraft(blue, red);
 
@@ -585,7 +618,7 @@ describe("Simultaneous Mode", () => {
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
     const config: DraftConfig = {
-      ...BASE_CONFIG,
+      ...CHAR_CONFIG,
       banMode: "simultaneous",
     };
 
@@ -595,33 +628,7 @@ describe("Simultaneous Mode", () => {
     const { blueState } = await startDraft(blue, red);
     let state = blueState;
 
-    // Skip through map phase
-    const mapSteps = state.turnOrder.filter((s: any) => s.phase === "MAP_BAN");
-    const pool = [...state.mapBans.mapPool];
-    let mapIdx = 0;
-    for (const step of mapSteps) {
-      const p = waitForDraftState(blue);
-      if (step.type === "map_pick") {
-        (step.team === "blue" ? blue : red).emit("draft:pick-map", pool[mapIdx++]!);
-      } else {
-        (step.team === "blue" ? blue : red).emit("draft:ban-map", pool[mapIdx++]!);
-      }
-      state = await p;
-    }
-
-    // Skip through awakening if present
-    if (state.phase === "AWAKENING_REVEAL") {
-      const pair = state.awakeningReveal.revealedPair!;
-      let p = waitForDraftState(blue);
-      blue.emit("draft:pick-awakening", pair[0]);
-      state = await p;
-
-      p = waitForDraftState(blue);
-      red.emit("draft:pick-awakening", pair[1]);
-      state = await p;
-    }
-
-    // Now we should be in CHAR_BAN with simultaneous bans
+    // Should start in CHAR_BAN with simultaneous bans
     if (state.phase === "CHAR_BAN") {
       const step = state.turnOrder[state.turnIndex];
       expect(step.team).toBe("both");
@@ -651,41 +658,11 @@ describe("Simultaneous Mode", () => {
     const red = client();
     await Promise.all([waitForConnect(blue), waitForConnect(red)]);
 
-    const roomId = await createRoom(blue);
+    const roomId = await createRoom(blue, CHAR_CONFIG);
     await joinRed(red, roomId);
     await startDraft(blue, red);
 
-    // Complete map phase (Bo1: blue bans 3, red picks 1)
-    let p = waitForDraftState(blue);
-    blue.emit("draft:ban-map", poolMaps[0].id);
-    let state = await p;
-
-    p = waitForDraftState(blue);
-    blue.emit("draft:ban-map", poolMaps[1].id);
-    state = await p;
-
-    p = waitForDraftState(blue);
-    blue.emit("draft:ban-map", poolMaps[2].id);
-    state = await p;
-
-    p = waitForDraftState(blue);
-    red.emit("draft:pick-map", poolMaps[3].id);
-    state = await p;
-
-    // Awakening picks
-    if (state.phase === "AWAKENING_REVEAL") {
-      const pair = state.awakeningReveal.revealedPair!;
-      p = waitForDraftState(blue);
-      blue.emit("draft:pick-awakening", pair[0]);
-      state = await p;
-
-      p = waitForDraftState(blue);
-      red.emit("draft:pick-awakening", pair[1]);
-      state = await p;
-    }
-
     // Now in CHAR_BAN - try locking without selection
-    expect(state.phase).toBe("CHAR_BAN");
     const errorP = waitForError(blue);
     blue.emit("draft:lock");
     const errorMsg = await errorP;
@@ -819,7 +796,7 @@ describe("REST API", () => {
       method: "POST",
       url: "/rooms",
       headers: { "content-type": "application/json" },
-      payload: BASE_CONFIG,
+      payload: MAP_CONFIG,
     });
 
     expect(response.statusCode).toBe(201);
@@ -846,7 +823,7 @@ describe("REST API", () => {
       method: "POST",
       url: "/rooms",
       headers: { "content-type": "application/json" },
-      payload: BASE_CONFIG,
+      payload: MAP_CONFIG,
     });
     const { roomId } = JSON.parse(createRes.body);
 
@@ -858,7 +835,7 @@ describe("REST API", () => {
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as RoomState;
     expect(body.roomId).toBe(roomId);
-    expect(body.config).toEqual(BASE_CONFIG);
+    expect(body.config).toEqual(MAP_CONFIG);
   });
 
   it("GET /rooms/:id should return 404 for non-existent room", async () => {

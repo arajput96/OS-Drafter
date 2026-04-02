@@ -1,11 +1,7 @@
 import type { Team, DraftState } from "@os-drafter/shared";
-import { AWAKENINGS } from "@os-drafter/shared";
 import { cn } from "@/lib/utils";
 import { BanSlot } from "./ban-slot";
 import { PickSlot } from "./pick-slot";
-import Image from "next/image";
-
-const awakeningMap = new Map(AWAKENINGS.map((a) => [a.id, a]));
 
 interface TeamPanelProps {
   team: Team;
@@ -29,11 +25,11 @@ function getActiveSlotInfo(
 export function TeamPanel({ team, draft, className }: TeamPanelProps) {
   const bans = team === "blue" ? draft.blueTeamBans : draft.redTeamBans;
   const picks = team === "blue" ? draft.blueTeamPicks : draft.redTeamPicks;
-  const awakeningId =
-    team === "blue"
-      ? draft.awakeningReveal.blueChoice
-      : draft.awakeningReveal.redChoice;
-  const awakening = awakeningId ? awakeningMap.get(awakeningId) : null;
+
+  const isCharacterDraft = draft.config.draftType === "character";
+  const teamLabel = isCharacterDraft
+    ? (team === "blue" ? "Blue" : "Red")
+    : (team === "blue" ? "Side Select" : "Map Select");
 
   const active = getActiveSlotInfo(draft);
 
@@ -53,24 +49,8 @@ export function TeamPanel({ team, draft, className }: TeamPanelProps) {
           team === "blue" ? "text-team-blue" : "text-team-red",
         )}
       >
-        {team === "blue" ? "Side Select" : "Map Select"}
+        {teamLabel}
       </div>
-
-      {/* Awakening */}
-      {awakening && (
-        <div className="flex items-center gap-2 rounded-md border border-border/30 bg-secondary/30 px-2 py-1">
-          <div className="relative size-6 shrink-0 overflow-hidden rounded">
-            <Image
-              src={awakening.icon}
-              alt={awakening.name}
-              fill
-              sizes="24px"
-              className="object-cover"
-            />
-          </div>
-          <span className="text-xs">{awakening.name}</span>
-        </div>
-      )}
 
       {/* Bans */}
       {bans.length > 0 && (

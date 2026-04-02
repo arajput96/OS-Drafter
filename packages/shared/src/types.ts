@@ -24,10 +24,11 @@ export interface Awakening {
 
 export type Team = "blue" | "red";
 
+export type DraftType = "map" | "character";
+
 export type DraftPhase =
   | "WAITING"
   | "MAP_BAN"
-  | "AWAKENING_REVEAL"
   | "CHAR_BAN"
   | "CHAR_PICK"
   | "COMPLETE";
@@ -39,6 +40,7 @@ export type MapBanMode = "bo1" | "bo3";
 export type MapRole = "side_select" | "map_select";
 
 export interface DraftConfig {
+  draftType: DraftType;
   draftMode: DraftMode;
   banMode: BanMode;
   mirrorRule: MirrorRule;
@@ -48,6 +50,7 @@ export interface DraftConfig {
   mapBanMode: MapBanMode;
   blueMapRole: MapRole;
   excludedMaps: string[];
+  selectedMapName?: string;
 }
 
 export type DraftAction =
@@ -61,12 +64,6 @@ export type DraftAction =
       type: "map_pick";
       team: Team;
       mapId: string;
-      index: number;
-    }
-  | {
-      type: "awakening_pick";
-      team: Team;
-      awakeningId: string;
       index: number;
     }
   | {
@@ -95,14 +92,12 @@ export interface MapBanState {
 
 export interface AwakeningRevealState {
   revealedPair: [string, string] | null;
-  blueChoice: string | null;
-  redChoice: string | null;
 }
 
 export interface TurnStep {
   phase: DraftPhase;
   team: Team | "both";
-  type: "map_ban" | "map_pick" | "awakening_pick" | "ban" | "pick";
+  type: "map_ban" | "map_pick" | "ban" | "pick";
   index: number;
 }
 
@@ -140,6 +135,7 @@ export interface RoomState {
   redConnected: boolean;
   spectatorCount: number;
   draft: DraftState | null;
+  revealedAwakenings: [string, string] | null;
 }
 
 // ── Socket.IO Event Types ──
@@ -153,7 +149,6 @@ export interface ClientToServerEvents {
   "draft:start": () => void;
   "draft:ban-map": (mapId: string) => void;
   "draft:pick-map": (mapId: string) => void;
-  "draft:pick-awakening": (awakeningId: string) => void;
   "draft:select": (characterId: string) => void;
   "draft:lock": () => void;
 }

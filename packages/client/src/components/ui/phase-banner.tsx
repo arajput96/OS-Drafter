@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 const PHASE_LABELS: Record<DraftPhase, string> = {
   WAITING: "Waiting to Start",
   MAP_BAN: "Map Ban Phase",
-  AWAKENING_REVEAL: "Awakening Selection",
   CHAR_BAN: "Character Ban Phase",
   CHAR_PICK: "Character Pick Phase",
   COMPLETE: "Draft Complete",

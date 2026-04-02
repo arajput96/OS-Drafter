@@ -19,7 +19,6 @@ export class DraftMachine {
   private characterIds: string[];
   private mapIds: string[];
   private awakeningIds: string[];
-  private hasAwakenings: boolean;
 
   constructor(
     config: DraftConfig,
@@ -29,15 +28,12 @@ export class DraftMachine {
   ) {
     this.characterIds = [...characterIds];
     this.awakeningIds = [...awakeningIds];
-    this.hasAwakenings = awakeningIds.length >= 2;
 
     // Filter excluded maps from the pool
     const excluded = new Set(config.excludedMaps);
     this.mapIds = mapIds.filter((id) => !excluded.has(id));
 
-    const turnOrder = generateTurnOrder(config, {
-      includeAwakenings: this.hasAwakenings,
-    });
+    const turnOrder = generateTurnOrder(config);
 
     const mapBans: MapBanState = {
       mapPool: [...this.mapIds],
@@ -51,8 +47,6 @@ export class DraftMachine {
 
     const awakeningReveal: AwakeningRevealState = {
       revealedPair: null,
-      blueChoice: null,
-      redChoice: null,
     };
 
     this.state = {
@@ -151,15 +145,20 @@ export class DraftMachine {
 
   // ── Commands ──
 
+  /**
+   * Reveal a random pair of awakenings. Called at room creation time
+   * for character drafts so they are visible in the waiting room.
+   */
+  revealAwakenings(): void {
+    if (this.awakeningIds.length >= 2) {
+      const shuffled = [...this.awakeningIds].sort(() => Math.random() - 0.5);
+      this.state.awakeningReveal.revealedPair = [shuffled[0]!, shuffled[1]!];
+    }
+  }
+
   start(): DraftResult {
     if (this.state.phase !== "WAITING") {
       return { ok: false, error: "Draft has already started" };
-    }
-
-    // Reveal a random awakening pair (only if awakenings are available)
-    if (this.hasAwakenings) {
-      const shuffled = [...this.awakeningIds].sort(() => Math.random() - 0.5);
-      this.state.awakeningReveal.revealedPair = [shuffled[0]!, shuffled[1]!];
     }
 
     this.state.turnIndex = 0;
@@ -213,40 +212,6 @@ export class DraftMachine {
         this.state.mapBans.gameOrder[0] = mapId; // M's pick = game 1
       } else if (team === sideSelect) {
         this.state.mapBans.gameOrder[1] = mapId; // S's pick = game 2
-      }
-    }
-
-    this.advance();
-    return { ok: true, state: this.state };
-  }
-
-  pickAwakening(team: Team, awakeningId: string): DraftResult {
-    const step = this.getCurrentStep();
-    const error = this.validateStep(team, step, "AWAKENING_REVEAL", "awakening_pick");
-    if (error) return { ok: false, error };
-
-    const { revealedPair, blueChoice, redChoice } = this.state.awakeningReveal;
-    if (!revealedPair) {
-      return { ok: false, error: "No awakenings have been revealed" };
-    }
-    if (!revealedPair.includes(awakeningId)) {
-      return { ok: false, error: `Awakening "${awakeningId}" is not one of the revealed options` };
-    }
-
-    if (team === "blue") {
-      if (blueChoice !== null) return { ok: false, error: "Blue has already chosen an awakening" };
-      this.state.awakeningReveal.blueChoice = awakeningId;
-    } else {
-      if (redChoice !== null) return { ok: false, error: "Red has already chosen an awakening" };
-      // If blue already chose this one, red gets the other
-      if (blueChoice === awakeningId) {
-        const alternative = revealedPair.find((id) => id !== blueChoice);
-        if (!alternative) {
-          return { ok: false, error: "No alternative awakening available" };
-        }
-        this.state.awakeningReveal.redChoice = alternative;
-      } else {
-        this.state.awakeningReveal.redChoice = awakeningId;
       }
     }
 
@@ -356,8 +321,6 @@ export class DraftMachine {
         return this.banMap(team, randomId);
       case "map_pick":
         return this.pickMap(team, randomId);
-      case "awakening_pick":
-        return this.pickAwakening(team, randomId);
       case "ban":
         return this.banCharacter(team, randomId);
       case "pick":
@@ -442,18 +405,12 @@ export class DraftMachine {
     if (this.state.turnIndex >= this.state.turnOrder.length) {
       this.state.phase = "COMPLETE";
       this.state.currentTurn = "blue"; // doesn't matter, draft is over
-      return;
-    }
 
-    // If transitioning from MAP_BAN to next phase, select the map
-    const prevStep = this.state.turnOrder[this.state.turnIndex - 1];
-    const nextStep = this.state.turnOrder[this.state.turnIndex]!;
-
-    if (prevStep?.phase === "MAP_BAN" && nextStep.phase !== "MAP_BAN") {
-      if (this.state.config.mapBanMode === "bo3") {
+      // For map drafts: assign remaining map to game 3 in Bo3
+      if (this.state.config.draftType === "map" && this.state.config.mapBanMode === "bo3") {
         this.assignRemainingMapToGame3();
       }
-      // Bo1: selectedMap is already set during pickMap, no action needed
+      return;
     }
 
     this.applyCurrentStep();
@@ -491,17 +448,6 @@ export class DraftMachine {
       case "map_pick":
         pool = this.getAvailableMaps();
         break;
-      case "awakening_pick": {
-        const revealed = this.state.awakeningReveal.revealedPair;
-        if (!revealed) return null;
-        // Pick from revealed options that haven't been chosen
-        const taken = [
-          this.state.awakeningReveal.blueChoice,
-          this.state.awakeningReveal.redChoice,
-        ].filter(Boolean) as string[];
-        pool = revealed.filter((id) => !taken.includes(id));
-        break;
-      }
       case "ban": {
         const allBans = [...this.state.blueTeamBans, ...this.state.redTeamBans].filter(Boolean) as string[];
         // Also exclude pending bans from the other team

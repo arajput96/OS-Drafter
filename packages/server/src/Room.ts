@@ -29,12 +29,21 @@ export class Room {
     red: null,
   };
 
+  /** Revealed awakenings for character drafts (set at room creation) */
+  private revealedAwakenings: [string, string] | null = null;
+
   private machine: DraftMachine | null = null;
   private timer: DraftTimer | null = null;
 
   constructor(roomId: string, config: DraftConfig) {
     this.roomId = roomId;
     this.config = config;
+
+    // For character drafts, reveal awakenings at room creation time
+    if (config.draftType === "character" && AWAKENINGS.length >= 2) {
+      const shuffled = [...AWAKENINGS].sort(() => Math.random() - 0.5);
+      this.revealedAwakenings = [shuffled[0]!.id, shuffled[1]!.id];
+    }
   }
 
   // ── Connection Management ──
@@ -106,7 +115,22 @@ export class Room {
     const mapIds = MAPS.filter((m) => m.active).map((m) => m.id);
     const awakeningIds = AWAKENINGS.map((a) => a.id);
 
-    this.machine = new DraftMachine(this.config, characterIds, mapIds, awakeningIds);
+    if (this.config.draftType === "map") {
+      // Map draft: only needs maps, no characters or awakenings
+      this.machine = new DraftMachine(this.config, [], mapIds, []);
+    } else {
+      // Character draft: needs characters and awakenings, no maps
+      this.machine = new DraftMachine(this.config, characterIds, [], awakeningIds);
+      // Set the pre-revealed awakenings on the machine state
+      if (this.revealedAwakenings) {
+        this.machine.revealAwakenings();
+        // Override with the pair that was already revealed at room creation
+        // so the waiting room and draft show the same pair
+        const state = this.machine.getState() as DraftState;
+        state.awakeningReveal.revealedPair = this.revealedAwakenings;
+      }
+    }
+
     return this.machine.start();
   }
 
@@ -225,6 +249,7 @@ export class Room {
       redConnected: this.isRedConnected(),
       spectatorCount: this.getSpectatorCount(),
       draft: this.getDraftState(),
+      revealedAwakenings: this.revealedAwakenings,
     };
   }
 
