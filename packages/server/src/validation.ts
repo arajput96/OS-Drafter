@@ -47,6 +47,9 @@ export function validateDraftConfig(config: unknown): string | null {
   if (!Array.isArray(c.excludedMaps) || c.excludedMaps.length !== 3) {
     return "excludedMaps must be an array of exactly 3 map IDs";
   }
+  if (new Set(c.excludedMaps).size !== 3) {
+    return "excludedMaps must contain 3 distinct map IDs";
+  }
 
   return null;
 }
@@ -77,6 +80,9 @@ export const draftConfigSchema = {
     excludedMaps: {
       type: "array" as const,
       items: { type: "string" as const },
+      minItems: 3,
+      maxItems: 3,
+      uniqueItems: true,
     },
   },
   additionalProperties: false,

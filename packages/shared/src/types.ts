@@ -46,8 +46,8 @@ export interface DraftConfig {
   numBans: number;
   numPicks: number;
   mapBanMode: MapBanMode;
-  blueMapRole?: MapRole;
-  excludedMaps?: string[];
+  blueMapRole: MapRole;
+  excludedMaps: string[];
 }
 
 export type DraftAction =

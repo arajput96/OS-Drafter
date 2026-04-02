@@ -32,7 +32,7 @@ export class DraftMachine {
     this.hasAwakenings = awakeningIds.length >= 2;
 
     // Filter excluded maps from the pool
-    const excluded = new Set(config.excludedMaps ?? []);
+    const excluded = new Set(config.excludedMaps);
     this.mapIds = mapIds.filter((id) => !excluded.has(id));
 
     const turnOrder = generateTurnOrder(config, {
@@ -479,7 +479,6 @@ export class DraftMachine {
     const available = this.getAvailableMaps();
     if (available.length >= 1) {
       this.state.mapBans.gameOrder[2] = available[0]!;
-      this.state.mapBans.selectedMap = available[0]!;
     }
   }
 

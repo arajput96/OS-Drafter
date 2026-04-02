@@ -64,7 +64,7 @@ export function RoomCreationForm() {
       />
 
       <MapExclusionPicker
-        excludedMaps={config.excludedMaps ?? []}
+        excludedMaps={config.excludedMaps}
         onChange={(excluded) => setConfig({ ...config, excludedMaps: excluded })}
       />
 
@@ -185,16 +185,19 @@ function MapExclusionPicker({
       <div className="grid grid-cols-2 gap-2">
         {activeMaps.map((map) => {
           const isExcluded = excluded.has(map.id);
+          const isDisabled = !isExcluded && excluded.size >= 3;
           return (
             <button
               key={map.id}
               type="button"
+              disabled={isDisabled}
+              aria-pressed={isExcluded}
               onClick={() => toggle(map.id)}
               className={`rounded-lg border px-3 py-2 text-xs text-left transition-colors ${
                 isExcluded
                   ? "border-destructive bg-destructive/10 text-destructive line-through"
                   : "border-border bg-input text-foreground hover:bg-secondary"
-              } ${!isExcluded && excluded.size >= 3 ? "opacity-50 cursor-not-allowed" : ""}`}
+              } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {map.name}
             </button>

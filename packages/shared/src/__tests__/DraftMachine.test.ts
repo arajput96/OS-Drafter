@@ -17,6 +17,7 @@ function makeConfig(overrides: Partial<DraftConfig> = {}): DraftConfig {
     numPicks: 3,
     mapBanMode: "bo1",
     blueMapRole: "side_select",
+    excludedMaps: [],
     ...overrides,
   };
 }
