@@ -68,6 +68,10 @@ export function useSocket(roomId: string, role: RoomRole) {
     socketRef.current?.emit("draft:ban-map", mapId);
   }, []);
 
+  const pickMap = useCallback((mapId: string) => {
+    socketRef.current?.emit("draft:pick-map", mapId);
+  }, []);
+
   const pickAwakening = useCallback((awakeningId: string) => {
     socketRef.current?.emit("draft:pick-awakening", awakeningId);
   }, []);
@@ -82,5 +86,5 @@ export function useSocket(roomId: string, role: RoomRole) {
     useDraftStore.getState().setSelected(null);
   }, []);
 
-  return { startDraft, banMap, pickAwakening, selectCharacter, lockIn };
+  return { startDraft, banMap, pickMap, pickAwakening, selectCharacter, lockIn };
 }

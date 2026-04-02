@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import type { RoomRole } from "@os-drafter/shared";
 import { useSocket } from "@/hooks/use-socket";
 import { useDraftStore } from "@/store/draft-store";
@@ -13,7 +14,7 @@ interface RoomClientProps {
 }
 
 export function RoomClient({ roomId, role }: RoomClientProps) {
-  const { startDraft, banMap, pickAwakening, selectCharacter, lockIn } =
+  const { startDraft, banMap, pickMap, pickAwakening, selectCharacter, lockIn } =
     useSocket(roomId, role);
 
   const connected = useDraftStore((s) => s.connected);
@@ -22,16 +23,21 @@ export function RoomClient({ roomId, role }: RoomClientProps) {
   const timerRemaining = useDraftStore((s) => s.timerRemaining);
   const selectedId = useDraftStore((s) => s.selectedId);
 
+  // Track if we were ever connected (to distinguish initial load vs reconnecting)
+  const wasConnected = useRef(false);
+  if (connected) wasConnected.current = true;
+
   const myTeam = role === "spectator" ? null : role;
 
-  // Loading state
+  // Loading / reconnecting state
   if (!connected || !room) {
+    const isReconnecting = wasConnected.current;
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           <p className="text-sm text-muted-foreground">
-            Connecting to room...
+            {isReconnecting ? "Connection lost. Reconnecting..." : "Connecting to room..."}
           </p>
         </div>
         <ErrorToast />
@@ -54,10 +60,12 @@ export function RoomClient({ roomId, role }: RoomClientProps) {
     <main className="min-h-screen p-4 lg:p-6">
       <DraftBoard
         draft={draft}
+        room={room}
         myTeam={myTeam}
         timerRemaining={timerRemaining}
         selectedId={selectedId}
         onBanMap={myTeam ? banMap : undefined}
+        onPickMap={myTeam ? pickMap : undefined}
         onPickAwakening={myTeam ? pickAwakening : undefined}
         onSelectCharacter={myTeam ? selectCharacter : undefined}
         onLockIn={myTeam ? lockIn : undefined}
