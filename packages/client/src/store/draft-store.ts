@@ -35,7 +35,12 @@ export const useDraftStore = create<DraftStore>((set) => ({
   setConnected: (connected) => set({ connected }),
   setRole: (role) => set({ role }),
   setRoom: (room) => set({ room }),
-  setDraft: (draft) => set({ draft }),
+  setDraft: (draft) =>
+    set((state) => {
+      // Clear tentative selection when the turn advances (e.g. timer expiry)
+      const turnAdvanced = state.draft && draft && state.draft.turnIndex !== draft.turnIndex;
+      return { draft, ...(turnAdvanced ? { selectedId: null } : {}) };
+    }),
   setTimer: (timerRemaining) => set({ timerRemaining }),
   setSelected: (selectedId) => set({ selectedId }),
   setError: (error) => set({ error }),

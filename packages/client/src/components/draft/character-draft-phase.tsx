@@ -4,7 +4,7 @@ import type { DraftState, Team } from "@os-drafter/shared";
 import { CharacterGrid } from "./character-grid";
 import { TeamPanel } from "./team-panel";
 import { Button } from "@/components/ui/button";
-import { Lock } from "lucide-react";
+import { Lock, Ban } from "lucide-react";
 
 interface CharacterDraftPhaseProps {
   draft: DraftState;
@@ -12,6 +12,7 @@ interface CharacterDraftPhaseProps {
   selectedId: string | null;
   onSelect?: (characterId: string) => void;
   onLockIn?: () => void;
+  onSkipBan?: () => void;
 }
 
 export function CharacterDraftPhase({
@@ -20,6 +21,7 @@ export function CharacterDraftPhase({
   selectedId,
   onSelect,
   onLockIn,
+  onSkipBan,
 }: CharacterDraftPhaseProps) {
   const isMyTurn =
     draft.currentTurn === "both" || draft.currentTurn === myTeam;
@@ -55,15 +57,29 @@ export function CharacterDraftPhase({
                 Waiting for opponent...
               </p>
             ) : (
-              <Button
-                onClick={onLockIn}
-                disabled={!canLock}
-                size="lg"
-                className="gap-2 px-8"
-              >
-                <Lock className="size-4" />
-                Lock In
-              </Button>
+              <div className="flex gap-3">
+                {draft.phase === "CHAR_BAN" && onSkipBan && (
+                  <Button
+                    onClick={onSkipBan}
+                    disabled={!isMyTurn}
+                    size="lg"
+                    variant="outline"
+                    className="gap-2 px-8"
+                  >
+                    <Ban className="size-4" />
+                    No Ban
+                  </Button>
+                )}
+                <Button
+                  onClick={onLockIn}
+                  disabled={!canLock}
+                  size="lg"
+                  className="gap-2 px-8"
+                >
+                  <Lock className="size-4" />
+                  Lock In
+                </Button>
+              </div>
             )}
           </div>
         )}

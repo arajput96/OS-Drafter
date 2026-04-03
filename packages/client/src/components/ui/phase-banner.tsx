@@ -1,4 +1,4 @@
-import type { DraftPhase } from "@os-drafter/shared";
+import type { DraftPhase, Team } from "@os-drafter/shared";
 import { cn } from "@/lib/utils";
 
 const PHASE_LABELS: Record<DraftPhase, string> = {
@@ -11,14 +11,22 @@ const PHASE_LABELS: Record<DraftPhase, string> = {
 
 interface PhaseBannerProps {
   phase: DraftPhase;
+  myTeam?: Team | null;
   className?: string;
 }
 
-export function PhaseBanner({ phase, className }: PhaseBannerProps) {
+export function PhaseBanner({ phase, myTeam, className }: PhaseBannerProps) {
+  const colorClass = myTeam === "blue"
+    ? "text-team-blue"
+    : myTeam === "red"
+      ? "text-team-red"
+      : "text-primary";
+
   return (
     <h2
       className={cn(
-        "text-center text-lg font-semibold uppercase tracking-widest text-primary",
+        "text-center text-lg font-semibold uppercase tracking-widest",
+        colorClass,
         className,
       )}
     >

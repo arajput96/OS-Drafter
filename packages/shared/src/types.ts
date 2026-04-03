@@ -22,6 +22,9 @@ export interface Awakening {
 
 // ── Draft Types ──
 
+/** Sentinel value to voluntarily skip a ban. */
+export const NO_BAN = "__NO_BAN__";
+
 export type Team = "blue" | "red";
 
 export type DraftType = "map" | "character";
