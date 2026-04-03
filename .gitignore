@@ -8,3 +8,5 @@ dist/
 .env.*.local
 .DS_Store
 PLAN.md
+.vercel
+.claude/
