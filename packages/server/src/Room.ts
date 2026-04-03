@@ -3,6 +3,7 @@ import {
   CHARACTERS,
   MAPS,
   CURRENT_AWAKENING_POOL,
+  pickTwoAwakenings,
   type DraftConfig,
   type DraftState,
   type DraftResult,
@@ -41,13 +42,7 @@ export class Room {
 
     // For character drafts, reveal awakenings at room creation time
     if (config.draftType === "character" && CURRENT_AWAKENING_POOL.length >= 2) {
-      const firstIndex = Math.floor(Math.random() * CURRENT_AWAKENING_POOL.length);
-      let secondIndex = Math.floor(Math.random() * (CURRENT_AWAKENING_POOL.length - 1));
-      if (secondIndex >= firstIndex) secondIndex += 1;
-      this.revealedAwakenings = [
-        CURRENT_AWAKENING_POOL[firstIndex]!,
-        CURRENT_AWAKENING_POOL[secondIndex]!,
-      ];
+      this.revealedAwakenings = pickTwoAwakenings(CURRENT_AWAKENING_POOL);
     }
   }
 

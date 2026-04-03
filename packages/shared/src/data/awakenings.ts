@@ -58,6 +58,96 @@ export const AWAKENINGS: readonly Awakening[] = [
   { id: "unstoppable", name: "Unstoppable", icon: "/assets/awakenings/Unstoppable.png" },
 ] as const;
 
+/**
+ * Awakening exclusion rules: if the first randomly selected awakening is key K,
+ * the second awakening must NOT be any ID in the value array.
+ * Source: https://omegastrikers.wiki.gg/wiki/Starting_Awakening_Exclusions
+ */
+export const AWAKENING_EXCLUSIONS: Readonly<Record<string, readonly string[]>> = {
+  "spark-of-resilience": ["spark-of-strength", "spark-of-agility", "spark-of-focus", "big-fish", "stagger-swagger", "bulk-up", "peak-performance", "tempo-swing", "orb-ponderer", "orb-dancer", "reverberation", "unstoppable", "recovery-drone", "reptile-remedy", "catalyst"],
+  "spark-of-focus": ["spark-of-resilience", "spark-of-strength", "spark-of-agility", "extra-special", "rapid-fire", "primetime", "perfect-form", "twin-drive", "hotshot", "adrenaline-rush", "heavy-impact", "orb-ponderer", "orb-dancer", "reverberation"],
+  "spark-of-strength": ["spark-of-focus", "spark-of-resilience", "spark-of-agility", "specialized-training", "adrenaline-rush", "prize-fighter", "heavy-impact", "bulk-up", "super-surge", "glass-cannon", "orb-ponderer", "orb-dancer", "one-two-punch", "explosive-entrance", "stinger", "might-of-the-colossus", "built-different"],
+  "spark-of-agility": ["spark-of-focus", "spark-of-resilience", "spark-of-strength", "stacks-on-stacks", "chronoboost", "glass-cannon", "peak-performance", "super-surge", "aerials", "fight-or-flight", "orb-dancer", "among-titans", "orb-ponderer", "explosive-entrance", "egoist", "knifes-edge"],
+  "extra-special": ["specialized-training", "twin-drive", "rapid-fire", "spark-of-focus", "orb-ponderer"],
+  "specialized-training": ["extra-special", "spark-of-strength", "adrenaline-rush", "stinger", "deadeye", "bulk-up", "prize-fighter", "might-of-the-colossus"],
+  "rapid-fire": ["primetime", "extra-special", "twin-drive", "hotshot", "spark-of-focus", "reverberation", "orb-ponderer", "stinger"],
+  "primetime": ["rapid-fire", "spark-of-focus", "reverberation", "stinger"],
+  "deadeye": ["missile-propulsion", "aerials", "glass-cannon", "siege-machine", "stinger", "specialized-training"],
+  "missile-propulsion": ["deadeye", "aerials", "glass-cannon", "siege-machine", "stinger"],
+  "perfect-form": ["heavy-impact", "tempo-swing", "spark-of-focus", "one-two-punch", "orb-ponderer"],
+  "twin-drive": ["super-surge", "chronoboost", "aerials", "rapid-fire", "extra-special", "spark-of-focus", "fight-or-flight", "orb-ponderer", "explosive-entrance"],
+  "super-surge": ["twin-drive", "chronoboost", "aerials", "spark-of-strength", "spark-of-agility", "explosive-entrance", "stinger", "might-of-the-colossus"],
+  "cast-to-last": ["chronoboost", "timeless-creator", "monumentalist", "siege-machine"],
+  "monumentalist": ["timeless-creator", "cast-to-last", "siege-machine"],
+  "timeless-creator": ["monumentalist", "cast-to-last", "siege-machine"],
+  "hotshot": ["rapid-fire", "spark-of-focus", "team-player", "reverberation", "quick-strike"],
+  "adrenaline-rush": ["prize-fighter", "specialized-training", "one-two-punch", "spark-of-focus", "reverberation", "demolitionist", "stinger", "might-of-the-colossus", "spark-of-strength"],
+  "prize-fighter": ["adrenaline-rush", "spark-of-strength", "recovery-drone", "stinger", "specialized-training", "might-of-the-colossus"],
+  "stinger": ["rapid-fire", "missile-propulsion", "adrenaline-rush", "spark-of-strength", "heavy-impact", "one-two-punch", "bulk-up", "super-surge", "explosive-entrance", "specialized-training", "deadeye", "primetime", "prize-fighter", "might-of-the-colossus", "stagger-swagger", "tempo-swing"],
+  "built-different": ["big-fish", "heavy-impact", "spark-of-strength", "demolitionist", "recovery-drone", "explosive-entrance", "rampage", "might-of-the-colossus", "quick-strike"],
+  "big-fish": ["built-different", "spark-of-resilience", "peak-performance", "bulk-up", "stagger-swagger", "tempo-swing", "reverberation", "demolitionist", "unstoppable", "recovery-drone", "reptile-remedy", "rampage", "might-of-the-colossus", "catalyst", "quick-strike"],
+  "stagger-swagger": ["big-fish", "bulk-up", "peak-performance", "spark-of-resilience", "tempo-swing", "stinger", "reverberation", "among-titans", "fight-or-flight", "unstoppable", "reptile-remedy", "rampage", "catalyst", "egoist", "knifes-edge", "stacks-on-stacks", "orb-dancer", "recovery-drone"],
+  "one-two-punch": ["perfect-form", "heavy-impact", "spark-of-strength", "adrenaline-rush", "explosive-entrance", "stinger", "might-of-the-colossus"],
+  "stacks-on-stacks": ["stagger-swagger", "glass-cannon", "spark-of-agility", "rampage", "among-titans", "fight-or-flight", "orb-dancer", "unstoppable", "recovery-drone", "reptile-remedy", "egoist", "knifes-edge"],
+  "chronoboost": ["super-surge", "cast-to-last", "aerials", "twin-drive", "spark-of-agility", "explosive-entrance"],
+  "glass-cannon": ["stacks-on-stacks", "deadeye", "missile-propulsion", "aerials", "spark-of-agility", "spark-of-strength", "among-titans", "knifes-edge", "orb-dancer", "unstoppable", "might-of-the-colossus", "egoist", "fight-or-flight"],
+  "heavy-impact": ["built-different", "perfect-form", "one-two-punch", "spark-of-strength", "spark-of-focus", "reverberation", "orb-ponderer", "explosive-entrance", "stinger", "might-of-the-colossus"],
+  "peak-performance": ["stagger-swagger", "big-fish", "bulk-up", "spark-of-resilience", "spark-of-agility", "tempo-swing", "reptile-remedy", "among-titans", "reverberation", "orb-dancer", "unstoppable", "catalyst", "egoist", "fight-or-flight", "knifes-edge"],
+  "bulk-up": ["stagger-swagger", "big-fish", "peak-performance", "spark-of-resilience", "spark-of-strength", "tempo-swing", "stinger", "reverberation", "unstoppable", "specialized-training", "reptile-remedy", "might-of-the-colossus", "catalyst"],
+  "aerials": ["deadeye", "missile-propulsion", "super-surge", "chronoboost", "glass-cannon", "spark-of-agility", "explosive-entrance", "siege-machine", "twin-drive"],
+  "quick-strike": ["hotshot", "built-different", "big-fish", "demolitionist", "team-player", "catalyst", "egoist", "fire-up", "fight-or-flight", "recovery-drone", "rampage", "might-of-the-colossus"],
+  "tempo-swing": ["perfect-form", "big-fish", "bulk-up", "peak-performance", "spark-of-resilience", "stagger-swagger", "reverberation", "unstoppable", "stinger", "rampage", "reptile-remedy", "might-of-the-colossus"],
+  "orb-dancer": ["orb-ponderer", "stacks-on-stacks", "stagger-swagger", "spark-of-agility", "spark-of-focus", "spark-of-resilience", "spark-of-strength", "glass-cannon", "peak-performance", "among-titans", "orb-replicator", "unstoppable", "recovery-drone", "reptile-remedy", "egoist", "fight-or-flight", "knifes-edge"],
+  "orb-ponderer": ["orb-dancer", "spark-of-focus", "spark-of-resilience", "spark-of-strength", "spark-of-agility", "rapid-fire", "twin-drive", "perfect-form", "heavy-impact", "extra-special", "reverberation", "orb-replicator", "unstoppable", "recovery-drone", "reptile-remedy", "egoist", "fight-or-flight", "knifes-edge"],
+  "orb-replicator": ["orb-ponderer", "orb-dancer", "fire-up", "team-player", "among-titans"],
+  "reverberation": ["big-fish", "bulk-up", "peak-performance", "spark-of-resilience", "tempo-swing", "spark-of-focus", "rapid-fire", "orb-ponderer", "heavy-impact", "adrenaline-rush", "hotshot", "unstoppable", "reptile-remedy", "catalyst", "primetime", "stagger-swagger"],
+  "catalyst": ["egoist", "fire-up", "quick-strike", "bulk-up", "reverberation", "peak-performance", "reptile-remedy", "unstoppable", "big-fish", "recovery-drone", "stagger-swagger", "spark-of-resilience"],
+  "egoist": ["fire-up", "catalyst", "quick-strike", "stagger-swagger", "peak-performance", "among-titans", "spark-of-agility", "knifes-edge", "orb-dancer", "orb-ponderer", "stacks-on-stacks", "glass-cannon", "fight-or-flight"],
+  "fire-up": ["catalyst", "egoist", "among-titans", "orb-replicator", "team-player", "quick-strike"],
+  "among-titans": ["spark-of-agility", "fire-up", "orb-replicator", "orb-dancer", "stacks-on-stacks", "stagger-swagger", "peak-performance", "glass-cannon", "fight-or-flight", "team-player", "might-of-the-colossus", "egoist", "knifes-edge"],
+  "demolitionist": ["built-different", "big-fish", "adrenaline-rush", "quick-strike", "recovery-drone", "rampage", "might-of-the-colossus"],
+  "fight-or-flight": ["twin-drive", "stagger-swagger", "among-titans", "stacks-on-stacks", "knifes-edge", "quick-strike", "rampage", "spark-of-agility", "peak-performance", "glass-cannon", "orb-dancer", "orb-ponderer", "egoist"],
+  "knifes-edge": ["fight-or-flight", "glass-cannon", "unstoppable", "recovery-drone", "peak-performance", "stacks-on-stacks", "stagger-swagger", "among-titans", "egoist", "spark-of-agility", "orb-dancer", "orb-ponderer"],
+  "team-player": ["fire-up", "orb-replicator", "quick-strike", "among-titans", "hotshot"],
+  "unstoppable": ["big-fish", "stagger-swagger", "stacks-on-stacks", "peak-performance", "bulk-up", "reverberation", "tempo-swing", "orb-dancer", "orb-ponderer", "glass-cannon", "spark-of-resilience", "recovery-drone", "knifes-edge", "reptile-remedy", "rampage", "catalyst"],
+  "recovery-drone": ["built-different", "big-fish", "demolitionist", "unstoppable", "stacks-on-stacks", "knifes-edge", "orb-dancer", "orb-ponderer", "prize-fighter", "spark-of-resilience", "quick-strike", "reptile-remedy", "rampage", "might-of-the-colossus", "stagger-swagger", "catalyst"],
+  "explosive-entrance": ["built-different", "heavy-impact", "super-surge", "aerials", "chronoboost", "one-two-punch", "spark-of-strength", "spark-of-agility", "twin-drive", "stinger", "might-of-the-colossus"],
+  "siege-machine": ["aerials", "missile-propulsion", "monumentalist", "timeless-creator", "cast-to-last", "deadeye"],
+  "reptile-remedy": ["big-fish", "bulk-up", "reverberation", "peak-performance", "spark-of-resilience", "tempo-swing", "unstoppable", "stagger-swagger", "recovery-drone", "rampage", "stacks-on-stacks", "orb-ponderer", "orb-dancer", "catalyst"],
+  "rampage": ["big-fish", "built-different", "recovery-drone", "demolitionist", "quick-strike", "fight-or-flight", "unstoppable", "stacks-on-stacks", "stagger-swagger", "reptile-remedy", "tempo-swing"],
+  "might-of-the-colossus": ["specialized-training", "prize-fighter", "adrenaline-rush", "one-two-punch", "heavy-impact", "bulk-up", "super-surge", "glass-cannon", "explosive-entrance", "stinger", "spark-of-strength", "big-fish", "built-different", "recovery-drone", "demolitionist", "among-titans", "quick-strike", "tempo-swing"],
+};
+
+/**
+ * Pick two distinct awakenings from the pool, respecting exclusion rules.
+ * Returns a tuple of [first, second] awakening IDs.
+ */
+export function pickTwoAwakenings(
+  pool: readonly string[],
+  exclusions: Readonly<Record<string, readonly string[]>> = AWAKENING_EXCLUSIONS,
+): [string, string] {
+  if (pool.length < 2) {
+    throw new Error("Pool must contain at least 2 awakenings");
+  }
+
+  const firstIndex = Math.floor(Math.random() * pool.length);
+  const first = pool[firstIndex]!;
+
+  const excluded = new Set(exclusions[first] ?? []);
+  excluded.add(first);
+  const validSecondPool = pool.filter((id) => !excluded.has(id));
+
+  if (validSecondPool.length === 0) {
+    // Safety fallback: pick any different awakening
+    let secondIndex = Math.floor(Math.random() * (pool.length - 1));
+    if (secondIndex >= firstIndex) secondIndex += 1;
+    return [first, pool[secondIndex]!];
+  }
+
+  const second = validSecondPool[Math.floor(Math.random() * validSecondPool.length)]!;
+  return [first, second];
+}
+
 /** IDs of awakenings currently legal in drafts. */
 export const CURRENT_AWAKENING_POOL: readonly string[] = [
   "among-titans",
