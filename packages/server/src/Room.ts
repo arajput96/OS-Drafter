@@ -41,8 +41,13 @@ export class Room {
 
     // For character drafts, reveal awakenings at room creation time
     if (config.draftType === "character" && AWAKENINGS.length >= 2) {
-      const shuffled = [...AWAKENINGS].sort(() => Math.random() - 0.5);
-      this.revealedAwakenings = [shuffled[0]!.id, shuffled[1]!.id];
+      const firstIndex = Math.floor(Math.random() * AWAKENINGS.length);
+      let secondIndex = Math.floor(Math.random() * (AWAKENINGS.length - 1));
+      if (secondIndex >= firstIndex) secondIndex += 1;
+      this.revealedAwakenings = [
+        AWAKENINGS[firstIndex]!.id,
+        AWAKENINGS[secondIndex]!.id,
+      ];
     }
   }
 
@@ -121,13 +126,9 @@ export class Room {
     } else {
       // Character draft: needs characters and awakenings, no maps
       this.machine = new DraftMachine(this.config, characterIds, [], awakeningIds);
-      // Set the pre-revealed awakenings on the machine state
+      // Pass the pre-revealed pair so the draft matches the waiting room
       if (this.revealedAwakenings) {
-        this.machine.revealAwakenings();
-        // Override with the pair that was already revealed at room creation
-        // so the waiting room and draft show the same pair
-        const state = this.machine.getState() as DraftState;
-        state.awakeningReveal.revealedPair = this.revealedAwakenings;
+        this.machine.revealAwakenings(this.revealedAwakenings);
       }
     }
 

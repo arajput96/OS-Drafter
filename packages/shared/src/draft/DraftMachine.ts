@@ -146,13 +146,23 @@ export class DraftMachine {
   // ── Commands ──
 
   /**
-   * Reveal a random pair of awakenings. Called at room creation time
-   * for character drafts so they are visible in the waiting room.
+   * Reveal a pair of awakenings. If a pair is provided, use it directly.
+   * Otherwise, pick two distinct random awakenings.
+   * Called at room creation time for character drafts.
    */
-  revealAwakenings(): void {
+  revealAwakenings(pair?: [string, string]): void {
+    if (pair) {
+      this.state.awakeningReveal.revealedPair = pair;
+      return;
+    }
     if (this.awakeningIds.length >= 2) {
-      const shuffled = [...this.awakeningIds].sort(() => Math.random() - 0.5);
-      this.state.awakeningReveal.revealedPair = [shuffled[0]!, shuffled[1]!];
+      const firstIndex = Math.floor(Math.random() * this.awakeningIds.length);
+      let secondIndex = Math.floor(Math.random() * (this.awakeningIds.length - 1));
+      if (secondIndex >= firstIndex) secondIndex += 1;
+      this.state.awakeningReveal.revealedPair = [
+        this.awakeningIds[firstIndex]!,
+        this.awakeningIds[secondIndex]!,
+      ];
     }
   }
 
