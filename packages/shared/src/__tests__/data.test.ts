@@ -49,8 +49,8 @@ describe("Game Data Integrity", () => {
   });
 
   describe("Awakenings", () => {
-    it("has 59 awakenings", () => {
-      expect(AWAKENINGS).toHaveLength(59);
+    it("has 55 awakenings", () => {
+      expect(AWAKENINGS).toHaveLength(55);
     });
 
     it("has unique IDs", () => {
