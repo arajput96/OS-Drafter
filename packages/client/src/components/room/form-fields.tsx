@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, ClipboardList } from "lucide-react";
 import type { CreateRoomResponse } from "@/lib/api";
 
 export function SelectField<T extends string>({
@@ -80,6 +80,19 @@ export function RoomLinks({
   blueLabel: string;
   redLabel: string;
 }) {
+  const [allCopied, setAllCopied] = useState(false);
+
+  const handleCopyAll = async () => {
+    const text = `${blueLabel} - ${result.blueUrl}\n${redLabel} - ${result.redUrl}\nSpectator - ${result.spectatorUrl}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setAllCopied(true);
+      setTimeout(() => setAllCopied(false), 2000);
+    } catch {
+      // Fallback: ignore silently
+    }
+  };
+
   return (
     <div className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-5">
       <h2 className="text-center text-xl font-bold text-primary">
@@ -92,6 +105,23 @@ export function RoomLinks({
       <RoomLink label={blueLabel} url={result.blueUrl} colorClass="text-team-blue" />
       <RoomLink label={redLabel} url={result.redUrl} colorClass="text-team-red" />
       <RoomLink label="Spectator" url={result.spectatorUrl} colorClass="text-muted-foreground" />
+
+      <button
+        onClick={handleCopyAll}
+        className="flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary transition-colors"
+      >
+        {allCopied ? (
+          <>
+            <Check className="size-4 text-primary" />
+            Copied!
+          </>
+        ) : (
+          <>
+            <ClipboardList className="size-4 text-muted-foreground" />
+            Copy All Links
+          </>
+        )}
+      </button>
     </div>
   );
 }

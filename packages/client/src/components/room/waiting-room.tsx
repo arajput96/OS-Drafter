@@ -2,7 +2,7 @@
 
 import type { RoomState, RoomRole } from "@os-drafter/shared";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, X } from "lucide-react";
+import { Check, Copy, ClipboardList, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useDraftStore } from "@/store/draft-store";
 import { AwakeningDisplay } from "@/components/draft/awakening-display";
@@ -78,14 +78,11 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
       )}
 
       {/* Shareable links */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-          Share these links
-        </p>
-        <CopyLink label={blueLabel} url={`${baseUrl}?role=blue`} />
-        <CopyLink label={redLabel} url={`${baseUrl}?role=red`} />
-        <CopyLink label="Spectator" url={`${baseUrl}?role=spectator`} />
-      </div>
+      <ShareLinks
+        blueLabel={blueLabel}
+        redLabel={redLabel}
+        baseUrl={baseUrl}
+      />
 
       {/* Config summary */}
       <div className="rounded-lg bg-secondary/50 p-3 text-xs text-muted-foreground">
@@ -135,6 +132,60 @@ function ConnectionStatus({
       <span className="text-xs text-muted-foreground">
         {connected ? "Connected" : "Waiting..."}
       </span>
+    </div>
+  );
+}
+
+function ShareLinks({
+  blueLabel,
+  redLabel,
+  baseUrl,
+}: {
+  blueLabel: string;
+  redLabel: string;
+  baseUrl: string;
+}) {
+  const [allCopied, setAllCopied] = useState(false);
+
+  const blueUrl = `${baseUrl}?role=blue`;
+  const redUrl = `${baseUrl}?role=red`;
+  const spectatorUrl = `${baseUrl}?role=spectator`;
+
+  const handleCopyAll = async () => {
+    const text = `${blueLabel} - ${blueUrl}\n${redLabel} - ${redUrl}\nSpectator - ${spectatorUrl}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setAllCopied(true);
+      setTimeout(() => setAllCopied(false), 2000);
+    } catch {
+      // Fallback: ignore silently
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs uppercase tracking-wider text-muted-foreground">
+        Share these links
+      </p>
+      <CopyLink label={blueLabel} url={blueUrl} />
+      <CopyLink label={redLabel} url={redUrl} />
+      <CopyLink label="Spectator" url={spectatorUrl} />
+      <button
+        onClick={handleCopyAll}
+        className="flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-secondary transition-colors"
+      >
+        {allCopied ? (
+          <>
+            <Check className="size-3.5 text-primary" />
+            Copied!
+          </>
+        ) : (
+          <>
+            <ClipboardList className="size-3.5 text-muted-foreground" />
+            Copy All Links
+          </>
+        )}
+      </button>
     </div>
   );
 }
