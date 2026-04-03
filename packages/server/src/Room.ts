@@ -2,7 +2,8 @@ import {
   DraftMachine,
   CHARACTERS,
   MAPS,
-  AWAKENINGS,
+  CURRENT_AWAKENING_POOL,
+  pickTwoAwakenings,
   type DraftConfig,
   type DraftState,
   type DraftResult,
@@ -40,14 +41,8 @@ export class Room {
     this.config = config;
 
     // For character drafts, reveal awakenings at room creation time
-    if (config.draftType === "character" && AWAKENINGS.length >= 2) {
-      const firstIndex = Math.floor(Math.random() * AWAKENINGS.length);
-      let secondIndex = Math.floor(Math.random() * (AWAKENINGS.length - 1));
-      if (secondIndex >= firstIndex) secondIndex += 1;
-      this.revealedAwakenings = [
-        AWAKENINGS[firstIndex]!.id,
-        AWAKENINGS[secondIndex]!.id,
-      ];
+    if (config.draftType === "character" && CURRENT_AWAKENING_POOL.length >= 2) {
+      this.revealedAwakenings = pickTwoAwakenings(CURRENT_AWAKENING_POOL);
     }
   }
 
@@ -118,7 +113,7 @@ export class Room {
 
     const characterIds = CHARACTERS.map((c) => c.id);
     const mapIds = MAPS.filter((m) => m.active).map((m) => m.id);
-    const awakeningIds = AWAKENINGS.map((a) => a.id);
+    const awakeningIds = [...CURRENT_AWAKENING_POOL];
 
     if (this.config.draftType === "map") {
       // Map draft: only needs maps, no characters or awakenings

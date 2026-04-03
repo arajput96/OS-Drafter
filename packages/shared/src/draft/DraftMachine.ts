@@ -8,6 +8,7 @@ import type {
   TurnStep,
 } from "../types.js";
 import { generateTurnOrder } from "./turnOrders.js";
+import { pickTwoAwakenings } from "../data/awakenings.js";
 import { resolveMapRoles } from "./mapRoles.js";
 
 /**
@@ -156,13 +157,7 @@ export class DraftMachine {
       return;
     }
     if (this.awakeningIds.length >= 2) {
-      const firstIndex = Math.floor(Math.random() * this.awakeningIds.length);
-      let secondIndex = Math.floor(Math.random() * (this.awakeningIds.length - 1));
-      if (secondIndex >= firstIndex) secondIndex += 1;
-      this.state.awakeningReveal.revealedPair = [
-        this.awakeningIds[firstIndex]!,
-        this.awakeningIds[secondIndex]!,
-      ];
+      this.state.awakeningReveal.revealedPair = pickTwoAwakenings(this.awakeningIds);
     }
   }
 
