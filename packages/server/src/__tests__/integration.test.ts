@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import type { DraftConfig, DraftState, RoomState } from "@os-drafter/shared";
-import { CHARACTERS, MAPS } from "@os-drafter/shared";
+import { CHARACTERS, MAPS, NO_BAN } from "@os-drafter/shared";
 import {
   createTestServer,
   createTestClient,
@@ -856,4 +856,81 @@ describe("REST API", () => {
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body).status).toBe("ok");
   });
+});
+
+// ════════════════════════════════════════════════════
+// Suite G: Character Phase Timer Expiry with Tentative Selections
+// ════════════════════════════════════════════════════
+
+describe("Character Timer Expiry", () => {
+  let server: TestServer;
+  const sockets: TestSocket[] = [];
+
+  const STAGGERED_BAN_CONFIG: DraftConfig = {
+    ...CHAR_CONFIG,
+    banMode: "staggered",
+    numBans: 1,
+    timerSeconds: 1,
+  };
+
+  beforeAll(async () => {
+    server = await createTestServer();
+  });
+
+  afterEach(async () => {
+    for (const s of sockets) {
+      if (s.connected) s.disconnect();
+    }
+    sockets.length = 0;
+    await delay(100);
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  function client(): TestSocket {
+    const s = createTestClient(server.url);
+    sockets.push(s);
+    return s;
+  }
+
+  it("should lock in hovered character on timer expiry (staggered ban)", async () => {
+    const blue = client();
+    const red = client();
+    await Promise.all([waitForConnect(blue), waitForConnect(red)]);
+
+    const roomId = await createRoom(blue, STAGGERED_BAN_CONFIG);
+    await joinRed(red, roomId);
+    await startDraft(blue, red);
+
+    // Blue hovers a character (tentative selection) but doesn't lock in
+    blue.emit("draft:select", characterIds[0]!);
+    await delay(50);
+
+    // Wait for timer to expire and auto-lock
+    const state = await waitForDraftState(blue);
+    expect(state.blueTeamBans).toContain(characterIds[0]);
+  }, 10000);
+
+  it("should only affect turn player in staggered mode", async () => {
+    const blue = client();
+    const red = client();
+    await Promise.all([waitForConnect(blue), waitForConnect(red)]);
+
+    const roomId = await createRoom(blue, STAGGERED_BAN_CONFIG);
+    await joinRed(red, roomId);
+    await startDraft(blue, red);
+
+    // Both teams hover, but it's blue's turn in staggered mode
+    blue.emit("draft:select", characterIds[0]!);
+    red.emit("draft:select", characterIds[1]!);
+    await delay(50);
+
+    // Wait for blue's timer to expire
+    const state = await waitForDraftState(blue);
+    // Blue's hover was locked in, red hasn't banned yet (it's now red's turn)
+    expect(state.blueTeamBans).toContain(characterIds[0]);
+    expect(state.redTeamBans).toHaveLength(0);
+  }, 10000);
 });

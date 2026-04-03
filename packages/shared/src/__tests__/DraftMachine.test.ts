@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { DraftMachine } from "../draft/DraftMachine.js";
+import { NO_BAN } from "../types.js";
 import type { DraftConfig, Team, DraftMode, BanMode, MirrorRule } from "../types.js";
 
 // Small rosters for focused testing
@@ -540,6 +541,50 @@ describe("DraftMachine", () => {
       expect(result.ok).toBe(true);
       expect(machine.getState().blueTeamBans).toContain("c1");
       expect(machine.getState().redTeamBans).toHaveLength(1);
+    });
+  });
+
+  describe("NO_BAN (voluntary skip)", () => {
+    it("pushes null into bans in staggered mode and advances", () => {
+      const machine = createCharMachine({ banMode: "staggered", numBans: 1 });
+      machine.start();
+      expect(machine.getState().phase).toBe("CHAR_BAN");
+
+      const result = machine.banCharacter("blue", NO_BAN);
+      expect(result.ok).toBe(true);
+      expect(machine.getState().blueTeamBans).toEqual([null]);
+      // Should advance to red's ban turn
+      expect(machine.getState().currentTurn).toBe("red");
+    });
+
+    it("pushes null into bans in simultaneous mode and advances", () => {
+      const machine = createCharMachine({
+        banMode: "simultaneous",
+        numBans: 1,
+        mirrorRule: "full_duplicates",
+      });
+      machine.start();
+      expect(machine.getState().phase).toBe("CHAR_BAN");
+
+      machine.banCharacter("blue", NO_BAN);
+      const result = machine.banCharacter("red", NO_BAN);
+      expect(result.ok).toBe(true);
+      expect(machine.getState().blueTeamBans).toEqual([null]);
+      expect(machine.getState().redTeamBans).toEqual([null]);
+      // Should advance past ban phase
+      expect(machine.getState().phase).toBe("CHAR_PICK");
+    });
+
+    it("does not affect available character pool", () => {
+      const machine = createCharMachine({ banMode: "staggered", numBans: 1 });
+      machine.start();
+      const availableBefore = machine.getAvailableCharacters("blue");
+
+      machine.banCharacter("blue", NO_BAN);
+      machine.banCharacter("red", NO_BAN);
+
+      const availableAfter = machine.getAvailableCharacters("blue");
+      expect(availableAfter).toEqual(availableBefore);
     });
   });
 

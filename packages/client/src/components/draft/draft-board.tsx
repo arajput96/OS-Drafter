@@ -66,6 +66,7 @@ export function DraftBoard({
             currentTurn={draft.currentTurn}
             myTeam={myTeam}
             isCharacterDraft={isCharacterDraft}
+            phase={draft.phase}
           />
         )}
       </div>
@@ -105,18 +106,21 @@ function TurnIndicator({
   currentTurn,
   myTeam,
   isCharacterDraft,
+  phase,
 }: {
   currentTurn: "blue" | "red" | "both";
   myTeam: Team | null;
   isCharacterDraft: boolean;
+  phase: string;
 }) {
   const isMyTurn = currentTurn === "both" || currentTurn === myTeam;
 
   if (!myTeam) {
     // Spectator
+    const bothLabel = phase === "CHAR_BAN" ? "Both teams banning" : "Both teams picking";
     const label =
       currentTurn === "both"
-        ? "Both teams picking"
+        ? bothLabel
         : isCharacterDraft
           ? `${currentTurn === "blue" ? "Blue" : "Red"}'s turn`
           : `${currentTurn === "blue" ? "Side Select" : "Map Select"}'s turn`;

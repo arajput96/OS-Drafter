@@ -251,7 +251,10 @@ export class Room {
               this.stopTimer();
               this.broadcastPhaseChange(io);
             } else {
-              this.broadcastPhaseChange(io);
+              const prevPhase = this.machine.getState().turnOrder[prevIndex]?.phase;
+              if (prevPhase !== this.machine.getState().phase) {
+                this.broadcastPhaseChange(io);
+              }
               this.startTimer(io);
             }
           }
