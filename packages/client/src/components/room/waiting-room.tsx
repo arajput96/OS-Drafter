@@ -6,6 +6,7 @@ import { Check, Copy, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useDraftStore } from "@/store/draft-store";
 import { AwakeningDisplay } from "@/components/draft/awakening-display";
+import { CopyAllButton } from "./form-fields";
 
 interface WaitingRoomProps {
   room: RoomState;
@@ -78,14 +79,11 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
       )}
 
       {/* Shareable links */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-          Share these links
-        </p>
-        <CopyLink label={blueLabel} url={`${baseUrl}?role=blue`} />
-        <CopyLink label={redLabel} url={`${baseUrl}?role=red`} />
-        <CopyLink label="Spectator" url={`${baseUrl}?role=spectator`} />
-      </div>
+      <ShareLinks
+        blueLabel={blueLabel}
+        redLabel={redLabel}
+        baseUrl={baseUrl}
+      />
 
       {/* Config summary */}
       <div className="rounded-lg bg-secondary/50 p-3 text-xs text-muted-foreground">
@@ -135,6 +133,41 @@ function ConnectionStatus({
       <span className="text-xs text-muted-foreground">
         {connected ? "Connected" : "Waiting..."}
       </span>
+    </div>
+  );
+}
+
+function ShareLinks({
+  blueLabel,
+  redLabel,
+  baseUrl,
+}: {
+  blueLabel: string;
+  redLabel: string;
+  baseUrl: string;
+}) {
+  const blueUrl = `${baseUrl}?role=blue`;
+  const redUrl = `${baseUrl}?role=red`;
+  const spectatorUrl = `${baseUrl}?role=spectator`;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs uppercase tracking-wider text-muted-foreground">
+        Share these links
+      </p>
+      <CopyLink label={blueLabel} url={blueUrl} />
+      <CopyLink label={redLabel} url={redUrl} />
+      <CopyLink label="Spectator" url={spectatorUrl} />
+      {baseUrl && (
+        <CopyAllButton
+          size="sm"
+          links={[
+            { label: blueLabel, url: blueUrl },
+            { label: redLabel, url: redUrl },
+            { label: "Spectator", url: spectatorUrl },
+          ]}
+        />
+      )}
     </div>
   );
 }
