@@ -18,6 +18,7 @@ interface DraftBoardProps {
   onPickMap?: (mapId: string) => void;
   onSelectCharacter?: (characterId: string) => void;
   onLockIn?: () => void;
+  onSkipBan?: () => void;
 }
 
 export function DraftBoard({
@@ -30,6 +31,7 @@ export function DraftBoard({
   onPickMap,
   onSelectCharacter,
   onLockIn,
+  onSkipBan,
 }: DraftBoardProps) {
   const opponentDisconnected =
     myTeam === "blue" ? !room.redConnected :
@@ -55,7 +57,7 @@ export function DraftBoard({
 
       {/* Header: Phase + Timer */}
       <div className="flex flex-col items-center gap-2">
-        <PhaseBanner phase={draft.phase} />
+        {draft.phase !== "COMPLETE" && <PhaseBanner phase={draft.phase} myTeam={myTeam} />}
         {draft.phase !== "COMPLETE" && (
           <TimerDisplay seconds={timerRemaining} />
         )}
@@ -91,6 +93,7 @@ export function DraftBoard({
           selectedId={selectedId}
           onSelect={onSelectCharacter}
           onLockIn={onLockIn}
+          onSkipBan={onSkipBan}
         />
       )}
       {draft.phase === "COMPLETE" && <DraftComplete draft={draft} room={room} />}
@@ -117,11 +120,19 @@ function TurnIndicator({
         : isCharacterDraft
           ? `${currentTurn === "blue" ? "Blue" : "Red"}'s turn`
           : `${currentTurn === "blue" ? "Side Select" : "Map Select"}'s turn`;
-    return <p className="text-sm text-muted-foreground">{label}</p>;
+    const spectatorColor =
+      currentTurn === "both"
+        ? "text-muted-foreground"
+        : currentTurn === "blue"
+          ? "text-team-blue"
+          : "text-team-red";
+    return <p className={`text-sm ${spectatorColor}`}>{label}</p>;
   }
 
+  const teamColorClass = myTeam === "blue" ? "text-team-blue" : "text-team-red";
+
   return (
-    <p className={`text-sm font-medium ${isMyTurn ? "text-primary" : "text-muted-foreground"}`}>
+    <p className={`text-sm font-medium ${isMyTurn ? teamColorClass : "text-muted-foreground"}`}>
       {isMyTurn ? "Your turn" : "Opponent's turn"}
     </p>
   );

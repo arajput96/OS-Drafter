@@ -1,11 +1,12 @@
-import type {
-  DraftConfig,
-  DraftResult,
-  DraftState,
-  MapBanState,
-  AwakeningRevealState,
-  Team,
-  TurnStep,
+import {
+  NO_BAN,
+  type DraftConfig,
+  type DraftResult,
+  type DraftState,
+  type MapBanState,
+  type AwakeningRevealState,
+  type Team,
+  type TurnStep,
 } from "../types.js";
 import { generateTurnOrder } from "./turnOrders.js";
 import { pickTwoAwakenings } from "../data/awakenings.js";
@@ -229,6 +230,20 @@ export class DraftMachine {
     const error = this.validateStep(team, step, "CHAR_BAN", "ban");
     if (error) return { ok: false, error };
 
+    // Allow voluntary skip ("No Ban")
+    if (characterId === NO_BAN) {
+      if (step!.team === "both") {
+        return this.handleSimultaneousAction(team, NO_BAN, "ban");
+      }
+      if (team === "blue") {
+        this.state.blueTeamBans.push(null);
+      } else {
+        this.state.redTeamBans.push(null);
+      }
+      this.advance();
+      return { ok: true, state: this.state };
+    }
+
     if (!this.characterIds.includes(characterId)) {
       return { ok: false, error: `Character "${characterId}" does not exist` };
     }
@@ -392,8 +407,8 @@ export class DraftMachine {
     const redId = pending.red!;
 
     if (type === "ban") {
-      this.state.blueTeamBans.push(blueId);
-      this.state.redTeamBans.push(redId);
+      this.state.blueTeamBans.push(blueId === NO_BAN ? null : blueId);
+      this.state.redTeamBans.push(redId === NO_BAN ? null : redId);
     } else {
       this.state.blueTeamPicks.push(blueId);
       this.state.redTeamPicks.push(redId);

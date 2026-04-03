@@ -14,7 +14,7 @@ interface RoomClientProps {
 }
 
 export function RoomClient({ roomId, role }: RoomClientProps) {
-  const { startDraft, banMap, pickMap, selectCharacter, lockIn } =
+  const { startDraft, banMap, pickMap, selectCharacter, lockIn, skipBan } =
     useSocket(roomId, role);
 
   const connected = useDraftStore((s) => s.connected);
@@ -68,6 +68,7 @@ export function RoomClient({ roomId, role }: RoomClientProps) {
         onPickMap={myTeam ? pickMap : undefined}
         onSelectCharacter={myTeam ? selectCharacter : undefined}
         onLockIn={myTeam ? lockIn : undefined}
+        onSkipBan={myTeam ? skipBan : undefined}
       />
       <ErrorToast />
     </main>

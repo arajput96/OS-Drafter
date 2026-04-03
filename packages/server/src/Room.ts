@@ -153,6 +153,51 @@ export class Room {
     return this.machine?.getCurrentStep() ?? null;
   }
 
+  /**
+   * Before timer expiry falls back to random, try to commit any tentative
+   * (hovered) selections the players have made via draft:select.
+   *
+   * For single-team (staggered) turns, a successful lock advances the step,
+   * so callers must check whether the step moved and skip expireTimer if so.
+   *
+   * For simultaneous turns, locking a tentative selection stores it as a
+   * pending action (the step only advances when both sides have submitted),
+   * so expireTimer still needs to run to fill any remaining gaps.
+   */
+  private lockTentativeSelections(): void {
+    if (!this.machine) return;
+
+    const step = this.machine.getCurrentStep();
+    if (!step) return;
+
+    // Only applies to character ban/pick phases
+    if (step.phase !== "CHAR_BAN" && step.phase !== "CHAR_PICK") return;
+
+    const tryLock = (team: Team) => {
+      const selection = this.selections[team];
+      if (!selection) return;
+
+      const result =
+        step.phase === "CHAR_BAN"
+          ? this.machine!.banCharacter(team, selection)
+          : this.machine!.pickCharacter(team, selection);
+
+      if (result.ok) {
+        this.selections[team] = null;
+      }
+      // If invalid, leave it for expireTimer() to handle with random
+    };
+
+    if (step.team === "both") {
+      // Simultaneous: lock in whichever teams haven't submitted a pending action yet
+      const pending = this.machine.getState().pendingActions;
+      if (pending?.blue === null) tryLock("blue");
+      if (pending?.red === null) tryLock("red");
+    } else {
+      tryLock(step.team as Team);
+    }
+  }
+
   // ── Timer ──
 
   startTimer(io: TypedServer): void {
@@ -169,13 +214,38 @@ export class Room {
         if (!this.machine) return;
 
         const prevIndex = this.machine.getState().turnIndex;
+
+        // Try to lock in tentative selections before falling back to random.
+        // For staggered turns this may advance the step directly.
+        this.lockTentativeSelections();
+
+        const afterLockIndex = this.machine.getState().turnIndex;
+
+        if (afterLockIndex !== prevIndex) {
+          // Tentative selection already advanced the step — skip expireTimer
+          this.clearSelections();
+          this.broadcastDraftState(io);
+
+          if (this.machine.isComplete()) {
+            this.stopTimer();
+            this.broadcastPhaseChange(io);
+          } else {
+            const prevPhase = this.machine.getState().turnOrder[prevIndex]?.phase;
+            if (prevPhase !== this.machine.getState().phase) {
+              this.broadcastPhaseChange(io);
+            }
+            this.startTimer(io);
+          }
+          return;
+        }
+
+        // Tentative lock didn't fully resolve the step — fall back to random
         const result = this.machine.expireTimer();
 
         if (result.ok) {
           this.clearSelections();
           this.broadcastDraftState(io);
 
-          // If the step advanced, check if draft is complete or restart timer
           if (this.machine.getState().turnIndex !== prevIndex) {
             if (this.machine.isComplete()) {
               this.stopTimer();
@@ -186,9 +256,6 @@ export class Room {
             }
           }
         } else {
-          // TODO: Surface expireTimer failures to clients. This can happen if
-          // no valid options remain (e.g., all characters banned/picked). Consider
-          // emitting an error event and gracefully ending the draft.
           this.stopTimer();
           io.to(this.roomId).emit("error", result.error);
         }

@@ -31,7 +31,7 @@ export function CharacterDraftForm() {
         selectedMapName,
         timerSeconds,
         draftMode: "snake",
-        banMode: "simultaneous",
+        banMode: "staggered",
         mirrorRule: "no_mirrors",
         numBans: 1,
         numPicks: 3,

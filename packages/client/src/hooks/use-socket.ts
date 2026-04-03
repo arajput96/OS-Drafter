@@ -7,7 +7,7 @@ import type {
   ServerToClientEvents,
   RoomRole,
 } from "@os-drafter/shared";
-import { SERVER_PORT } from "@os-drafter/shared";
+import { SERVER_PORT, NO_BAN } from "@os-drafter/shared";
 import { useDraftStore } from "@/store/draft-store";
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -82,5 +82,12 @@ export function useSocket(roomId: string, role: RoomRole) {
     useDraftStore.getState().setSelected(null);
   }, []);
 
-  return { startDraft, banMap, pickMap, selectCharacter, lockIn };
+  const skipBan = useCallback(() => {
+    useDraftStore.getState().setSelected(NO_BAN);
+    socketRef.current?.emit("draft:select", NO_BAN);
+    socketRef.current?.emit("draft:lock");
+    useDraftStore.getState().setSelected(null);
+  }, []);
+
+  return { startDraft, banMap, pickMap, selectCharacter, lockIn, skipBan };
 }
