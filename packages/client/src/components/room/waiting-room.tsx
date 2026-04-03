@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Copy, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useDraftStore } from "@/store/draft-store";
+import { AwakeningDisplay } from "@/components/draft/awakening-display";
 
 interface WaitingRoomProps {
   room: RoomState;
@@ -17,6 +18,10 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
   const error = useDraftStore((s) => s.error);
   const canStart =
     role !== "spectator" && room.blueConnected && room.redConnected;
+
+  const isCharacterDraft = room.config.draftType === "character";
+  const blueLabel = isCharacterDraft ? "Blue" : "Side Select";
+  const redLabel = isCharacterDraft ? "Red" : "Map Select";
 
   // Reset starting state if an error occurs (e.g., server rejected the start)
   useEffect(() => {
@@ -43,12 +48,12 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
       {/* Connection status */}
       <div className="flex flex-col gap-3">
         <ConnectionStatus
-          label="Side Select"
+          label={blueLabel}
           connected={room.blueConnected}
           colorClass="text-team-blue"
         />
         <ConnectionStatus
-          label="Map Select"
+          label={redLabel}
           connected={room.redConnected}
           colorClass="text-team-red"
         />
@@ -59,22 +64,40 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
         )}
       </div>
 
+      {/* Selected map for character drafts */}
+      {isCharacterDraft && room.config.selectedMapName && (
+        <div className="rounded-lg bg-secondary/50 p-3 text-center">
+          <p className="text-xs text-muted-foreground">Map</p>
+          <p className="text-sm font-semibold">{room.config.selectedMapName}</p>
+        </div>
+      )}
+
+      {/* Starting awakenings for character drafts */}
+      {isCharacterDraft && room.revealedAwakenings && (
+        <AwakeningDisplay awakeningIds={room.revealedAwakenings} />
+      )}
+
       {/* Shareable links */}
       <div className="flex flex-col gap-2">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">
           Share these links
         </p>
-        <CopyLink label="Side Select" url={`${baseUrl}?role=blue`} />
-        <CopyLink label="Map Select" url={`${baseUrl}?role=red`} />
+        <CopyLink label={blueLabel} url={`${baseUrl}?role=blue`} />
+        <CopyLink label={redLabel} url={`${baseUrl}?role=red`} />
         <CopyLink label="Spectator" url={`${baseUrl}?role=spectator`} />
       </div>
 
       {/* Config summary */}
       <div className="rounded-lg bg-secondary/50 p-3 text-xs text-muted-foreground">
-        <p>
-          Format: {room.config.mapBanMode.toUpperCase()} | Bans: {room.config.numBans} | Picks:{" "}
-          {room.config.numPicks} | Timer: {room.config.timerSeconds}s
-        </p>
+        {isCharacterDraft ? (
+          <p>
+            Bans: {room.config.numBans} | Picks: {room.config.numPicks} | Timer: {room.config.timerSeconds}s
+          </p>
+        ) : (
+          <p>
+            Format: {room.config.mapBanMode.toUpperCase()} | Timer: {room.config.timerSeconds}s
+          </p>
+        )}
       </div>
 
       {/* Start button */}

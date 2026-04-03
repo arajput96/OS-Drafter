@@ -4,9 +4,9 @@ import type { DraftState, RoomState, Team } from "@os-drafter/shared";
 import { PhaseBanner } from "@/components/ui/phase-banner";
 import { TimerDisplay } from "@/components/ui/timer-display";
 import { MapBanPhase } from "./map-ban-phase";
-import { AwakeningPhase } from "./awakening-phase";
 import { CharacterDraftPhase } from "./character-draft-phase";
 import { DraftComplete } from "./draft-complete";
+import { AwakeningDisplay } from "./awakening-display";
 
 interface DraftBoardProps {
   draft: DraftState;
@@ -16,7 +16,6 @@ interface DraftBoardProps {
   selectedId: string | null;
   onBanMap?: (mapId: string) => void;
   onPickMap?: (mapId: string) => void;
-  onPickAwakening?: (awakeningId: string) => void;
   onSelectCharacter?: (characterId: string) => void;
   onLockIn?: () => void;
 }
@@ -29,7 +28,6 @@ export function DraftBoard({
   selectedId,
   onBanMap,
   onPickMap,
-  onPickAwakening,
   onSelectCharacter,
   onLockIn,
 }: DraftBoardProps) {
@@ -37,6 +35,9 @@ export function DraftBoard({
     myTeam === "blue" ? !room.redConnected :
     myTeam === "red" ? !room.blueConnected :
     false;
+
+  const isCharacterDraft = draft.config.draftType === "character";
+  const revealedAwakenings = room.revealedAwakenings;
 
   return (
     <div className="flex flex-col gap-4">
@@ -62,20 +63,26 @@ export function DraftBoard({
           <TurnIndicator
             currentTurn={draft.currentTurn}
             myTeam={myTeam}
+            isCharacterDraft={isCharacterDraft}
           />
         )}
       </div>
 
+      {/* Selected map name for character drafts */}
+      {isCharacterDraft && draft.config.selectedMapName && draft.phase !== "COMPLETE" && (
+        <p className="text-center text-xs text-muted-foreground">
+          Map: <span className="font-semibold text-foreground">{draft.config.selectedMapName}</span>
+        </p>
+      )}
+
+      {/* Shared awakenings for character drafts */}
+      {isCharacterDraft && revealedAwakenings && draft.phase !== "COMPLETE" && (
+        <AwakeningDisplay awakeningIds={revealedAwakenings} />
+      )}
+
       {/* Phase-specific UI */}
       {draft.phase === "MAP_BAN" && (
         <MapBanPhase draft={draft} myTeam={myTeam} onBanMap={onBanMap} onPickMap={onPickMap} />
-      )}
-      {draft.phase === "AWAKENING_REVEAL" && (
-        <AwakeningPhase
-          draft={draft}
-          myTeam={myTeam}
-          onPickAwakening={onPickAwakening}
-        />
       )}
       {(draft.phase === "CHAR_BAN" || draft.phase === "CHAR_PICK") && (
         <CharacterDraftPhase
@@ -86,7 +93,7 @@ export function DraftBoard({
           onLockIn={onLockIn}
         />
       )}
-      {draft.phase === "COMPLETE" && <DraftComplete draft={draft} />}
+      {draft.phase === "COMPLETE" && <DraftComplete draft={draft} room={room} />}
     </div>
   );
 }
@@ -94,9 +101,11 @@ export function DraftBoard({
 function TurnIndicator({
   currentTurn,
   myTeam,
+  isCharacterDraft,
 }: {
   currentTurn: "blue" | "red" | "both";
   myTeam: Team | null;
+  isCharacterDraft: boolean;
 }) {
   const isMyTurn = currentTurn === "both" || currentTurn === myTeam;
 
@@ -105,7 +114,9 @@ function TurnIndicator({
     const label =
       currentTurn === "both"
         ? "Both teams picking"
-        : `${currentTurn === "blue" ? "Side Select" : "Map Select"}'s turn`;
+        : isCharacterDraft
+          ? `${currentTurn === "blue" ? "Blue" : "Red"}'s turn`
+          : `${currentTurn === "blue" ? "Side Select" : "Map Select"}'s turn`;
     return <p className="text-sm text-muted-foreground">{label}</p>;
   }
 

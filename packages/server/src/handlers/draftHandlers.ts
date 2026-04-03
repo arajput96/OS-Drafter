@@ -90,36 +90,6 @@ export function registerDraftHandlers(io: TypedServer, socket: TypedSocket): voi
     afterAction(io, room, prevIndex);
   });
 
-  socket.on("draft:pick-awakening", (awakeningId: string) => {
-    const ctx = getTeamContext(socket);
-    if (!ctx) return;
-    const { room, team } = ctx;
-
-    const machine = room.getMachine();
-    if (!machine) {
-      socket.emit("error", "Draft has not started");
-      return;
-    }
-
-    const prevIndex = machine.getState().turnIndex;
-    const result = machine.pickAwakening(team, awakeningId);
-
-    if (!result.ok) {
-      socket.emit("error", result.error);
-      return;
-    }
-
-    const action: DraftAction = {
-      type: "awakening_pick",
-      team,
-      awakeningId,
-      index: prevIndex,
-    };
-    io.to(room.roomId).emit("draft:action", action);
-
-    afterAction(io, room, prevIndex);
-  });
-
   socket.on("draft:select", (characterId: string) => {
     const ctx = getTeamContext(socket);
     if (!ctx) return;

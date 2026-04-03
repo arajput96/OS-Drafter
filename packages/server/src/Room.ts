@@ -29,12 +29,26 @@ export class Room {
     red: null,
   };
 
+  /** Revealed awakenings for character drafts (set at room creation) */
+  private revealedAwakenings: [string, string] | null = null;
+
   private machine: DraftMachine | null = null;
   private timer: DraftTimer | null = null;
 
   constructor(roomId: string, config: DraftConfig) {
     this.roomId = roomId;
     this.config = config;
+
+    // For character drafts, reveal awakenings at room creation time
+    if (config.draftType === "character" && AWAKENINGS.length >= 2) {
+      const firstIndex = Math.floor(Math.random() * AWAKENINGS.length);
+      let secondIndex = Math.floor(Math.random() * (AWAKENINGS.length - 1));
+      if (secondIndex >= firstIndex) secondIndex += 1;
+      this.revealedAwakenings = [
+        AWAKENINGS[firstIndex]!.id,
+        AWAKENINGS[secondIndex]!.id,
+      ];
+    }
   }
 
   // ── Connection Management ──
@@ -106,7 +120,18 @@ export class Room {
     const mapIds = MAPS.filter((m) => m.active).map((m) => m.id);
     const awakeningIds = AWAKENINGS.map((a) => a.id);
 
-    this.machine = new DraftMachine(this.config, characterIds, mapIds, awakeningIds);
+    if (this.config.draftType === "map") {
+      // Map draft: only needs maps, no characters or awakenings
+      this.machine = new DraftMachine(this.config, [], mapIds, []);
+    } else {
+      // Character draft: needs characters and awakenings, no maps
+      this.machine = new DraftMachine(this.config, characterIds, [], awakeningIds);
+      // Pass the pre-revealed pair so the draft matches the waiting room
+      if (this.revealedAwakenings) {
+        this.machine.revealAwakenings(this.revealedAwakenings);
+      }
+    }
+
     return this.machine.start();
   }
 
@@ -225,6 +250,7 @@ export class Room {
       redConnected: this.isRedConnected(),
       spectatorCount: this.getSpectatorCount(),
       draft: this.getDraftState(),
+      revealedAwakenings: this.revealedAwakenings,
     };
   }
 
