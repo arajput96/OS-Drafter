@@ -131,11 +131,10 @@ describe("Game Data Integrity", () => {
       }
     });
 
-    it("falls back when all others are excluded", () => {
+    it("throws when no valid pair exists", () => {
       const pool = ["a1", "a2"];
       const exclusions = { a1: ["a2"], a2: ["a1"] };
-      const [first, second] = pickTwoAwakenings(pool, exclusions);
-      expect(first).not.toBe(second);
+      expect(() => pickTwoAwakenings(pool, exclusions)).toThrow("No valid awakening pair");
     });
 
     it("throws when pool has fewer than 2 entries", () => {

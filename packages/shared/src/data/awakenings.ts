@@ -130,22 +130,26 @@ export function pickTwoAwakenings(
     throw new Error("Pool must contain at least 2 awakenings");
   }
 
-  const firstIndex = Math.floor(Math.random() * pool.length);
-  const first = pool[firstIndex]!;
-
-  const excluded = new Set(exclusions[first] ?? []);
-  excluded.add(first);
-  const validSecondPool = pool.filter((id) => !excluded.has(id));
-
-  if (validSecondPool.length === 0) {
-    // Safety fallback: pick any different awakening
-    let secondIndex = Math.floor(Math.random() * (pool.length - 1));
-    if (secondIndex >= firstIndex) secondIndex += 1;
-    return [first, pool[secondIndex]!];
+  // Shuffle indices to try first picks in random order
+  const indices = Array.from({ length: pool.length }, (_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j]!, indices[i]!];
   }
 
-  const second = validSecondPool[Math.floor(Math.random() * validSecondPool.length)]!;
-  return [first, second];
+  for (const firstIndex of indices) {
+    const first = pool[firstIndex]!;
+    const excluded = new Set(exclusions[first] ?? []);
+    excluded.add(first);
+    const validSecondPool = pool.filter((id) => !excluded.has(id));
+
+    if (validSecondPool.length > 0) {
+      const second = validSecondPool[Math.floor(Math.random() * validSecondPool.length)]!;
+      return [first, second];
+    }
+  }
+
+  throw new Error("No valid awakening pair exists in the pool");
 }
 
 /** IDs of awakenings currently legal in drafts. */
