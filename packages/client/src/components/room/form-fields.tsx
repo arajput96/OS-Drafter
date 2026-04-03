@@ -71,6 +71,50 @@ export function NumberField({
   );
 }
 
+export function CopyAllButton({
+  links,
+  size = "md",
+}: {
+  links: { label: string; url: string }[];
+  size?: "sm" | "md";
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAll = async () => {
+    const text = links.map((l) => `${l.label} - ${l.url}`).join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: ignore silently
+    }
+  };
+
+  const sizeClasses = size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm";
+  const iconSize = size === "sm" ? "size-3.5" : "size-4";
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopyAll}
+      className={`flex items-center justify-center gap-2 rounded-lg border border-border font-medium hover:bg-secondary transition-colors ${sizeClasses}`}
+    >
+      {copied ? (
+        <>
+          <Check className={`${iconSize} text-primary`} />
+          Copied!
+        </>
+      ) : (
+        <>
+          <ClipboardList className={`${iconSize} text-muted-foreground`} />
+          Copy All Links
+        </>
+      )}
+    </button>
+  );
+}
+
 export function RoomLinks({
   result,
   blueLabel,
@@ -80,19 +124,6 @@ export function RoomLinks({
   blueLabel: string;
   redLabel: string;
 }) {
-  const [allCopied, setAllCopied] = useState(false);
-
-  const handleCopyAll = async () => {
-    const text = `${blueLabel} - ${result.blueUrl}\n${redLabel} - ${result.redUrl}\nSpectator - ${result.spectatorUrl}`;
-    try {
-      await navigator.clipboard.writeText(text);
-      setAllCopied(true);
-      setTimeout(() => setAllCopied(false), 2000);
-    } catch {
-      // Fallback: ignore silently
-    }
-  };
-
   return (
     <div className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-5">
       <h2 className="text-center text-xl font-bold text-primary">
@@ -106,22 +137,13 @@ export function RoomLinks({
       <RoomLink label={redLabel} url={result.redUrl} colorClass="text-team-red" />
       <RoomLink label="Spectator" url={result.spectatorUrl} colorClass="text-muted-foreground" />
 
-      <button
-        onClick={handleCopyAll}
-        className="flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary transition-colors"
-      >
-        {allCopied ? (
-          <>
-            <Check className="size-4 text-primary" />
-            Copied!
-          </>
-        ) : (
-          <>
-            <ClipboardList className="size-4 text-muted-foreground" />
-            Copy All Links
-          </>
-        )}
-      </button>
+      <CopyAllButton
+        links={[
+          { label: blueLabel, url: result.blueUrl },
+          { label: redLabel, url: result.redUrl },
+          { label: "Spectator", url: result.spectatorUrl },
+        ]}
+      />
     </div>
   );
 }
