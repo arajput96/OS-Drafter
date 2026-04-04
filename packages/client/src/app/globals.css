@@ -137,3 +137,28 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* OBS Overlay styles */
+.overlay-root {
+  background: transparent !important;
+}
+
+.overlay-root,
+.overlay-root body {
+  min-height: auto !important;
+}
+
+.overlay-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Overlay team colors — brighter for broadcast visibility */
+:root {
+  --overlay-blue: #00bfff;
+  --overlay-red: #ff2d78;
+}

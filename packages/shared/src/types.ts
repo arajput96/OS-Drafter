@@ -139,6 +139,8 @@ export interface RoomState {
   spectatorCount: number;
   draft: DraftState | null;
   revealedAwakenings: [string, string] | null;
+  blueTeamName?: string;
+  redTeamName?: string;
 }
 
 // ── Socket.IO Event Types ──

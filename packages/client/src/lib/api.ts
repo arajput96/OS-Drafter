@@ -9,13 +9,17 @@ export interface CreateRoomResponse {
   blueUrl: string;
   redUrl: string;
   spectatorUrl: string;
+  overlayUrl: string;
 }
 
-export async function createRoom(config: DraftConfig): Promise<CreateRoomResponse> {
+export async function createRoom(
+  config: DraftConfig,
+  teamNames?: { blueTeamName?: string; redTeamName?: string },
+): Promise<CreateRoomResponse> {
   const res = await fetch(`${API_BASE}/rooms`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(config),
+    body: JSON.stringify({ ...config, ...teamNames }),
   });
 
   if (!res.ok) {

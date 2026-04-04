@@ -18,6 +18,8 @@ import { DraftTimer } from "./DraftTimer.js";
 export class Room {
   readonly roomId: string;
   readonly config: DraftConfig;
+  readonly blueTeamName?: string;
+  readonly redTeamName?: string;
 
   /** Socket IDs per role */
   private blueSockets = new Set<string>();
@@ -36,9 +38,11 @@ export class Room {
   private machine: DraftMachine | null = null;
   private timer: DraftTimer | null = null;
 
-  constructor(roomId: string, config: DraftConfig) {
+  constructor(roomId: string, config: DraftConfig, blueTeamName?: string, redTeamName?: string) {
     this.roomId = roomId;
     this.config = config;
+    this.blueTeamName = blueTeamName;
+    this.redTeamName = redTeamName;
 
     // For character drafts, reveal awakenings at room creation time
     if (config.draftType === "character" && CURRENT_AWAKENING_POOL.length >= 2) {
@@ -316,6 +320,8 @@ export class Room {
       spectatorCount: this.getSpectatorCount(),
       draft: this.getDraftState(),
       revealedAwakenings: this.revealedAwakenings,
+      ...(this.blueTeamName && { blueTeamName: this.blueTeamName }),
+      ...(this.redTeamName && { redTeamName: this.redTeamName }),
     };
   }
 

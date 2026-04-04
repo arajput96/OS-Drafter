@@ -12,7 +12,10 @@ export function registerRoomHandlers(io: TypedServer, socket: TypedSocket): void
       return;
     }
 
-    const room = registry.create(config);
+    const payload = config as unknown as Record<string, unknown>;
+    const blueTeamName = typeof payload.blueTeamName === "string" ? payload.blueTeamName : undefined;
+    const redTeamName = typeof payload.redTeamName === "string" ? payload.redTeamName : undefined;
+    const room = registry.create(config, blueTeamName, redTeamName);
 
     // Auto-join the creator as blue
     socket.data.roomId = room.roomId;

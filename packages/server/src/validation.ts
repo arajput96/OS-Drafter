@@ -57,6 +57,18 @@ export function validateDraftConfig(config: unknown): string | null {
     }
   }
 
+  // Validate optional team names
+  if (c.blueTeamName !== undefined) {
+    if (typeof c.blueTeamName !== "string" || c.blueTeamName.length > 4) {
+      return "blueTeamName must be a string of at most 4 characters";
+    }
+  }
+  if (c.redTeamName !== undefined) {
+    if (typeof c.redTeamName !== "string" || c.redTeamName.length > 4) {
+      return "redTeamName must be a string of at most 4 characters";
+    }
+  }
+
   return null;
 }
 
@@ -79,5 +91,7 @@ export const draftConfigSchema = {
       items: { type: "string" as const },
     },
     selectedMapName: { type: "string" as const },
+    blueTeamName: { type: "string" as const, maxLength: 4 },
+    redTeamName: { type: "string" as const, maxLength: 4 },
   },
 };
