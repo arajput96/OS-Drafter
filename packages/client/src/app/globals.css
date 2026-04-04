@@ -138,14 +138,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* OBS Overlay styles */
-.overlay-root {
+/* OBS Overlay styles — override root layout's body background and sizing */
+html:has(.overlay-root),
+body:has(.overlay-root),
+body.overlay-active {
   background: transparent !important;
+  min-height: auto !important;
+  height: auto !important;
 }
 
-.overlay-root,
-.overlay-root body {
-  min-height: auto !important;
+body:has(.overlay-root),
+body.overlay-active {
+  display: block !important;
 }
 
 .overlay-banner {

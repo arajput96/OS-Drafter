@@ -145,9 +145,14 @@ export interface RoomState {
 
 // ── Socket.IO Event Types ──
 
+export interface CreateRoomPayload extends DraftConfig {
+  blueTeamName?: string;
+  redTeamName?: string;
+}
+
 export interface ClientToServerEvents {
   "room:create": (
-    config: DraftConfig,
+    config: CreateRoomPayload,
     callback: (roomId: string) => void,
   ) => void;
   "room:join": (roomId: string, role: RoomRole) => void;

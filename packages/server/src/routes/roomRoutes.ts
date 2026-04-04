@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { DraftConfig } from "@os-drafter/shared";
 import { registry } from "../RoomRegistry.js";
-import { draftConfigSchema, validateDraftConfig } from "../validation.js";
+import { draftConfigSchema, validateDraftConfig, normalizeTeamName } from "../validation.js";
 
 export function registerRoomRoutes(app: FastifyInstance, clientOrigin: string): void {
   app.post<{ Body: DraftConfig & { blueTeamName?: string; redTeamName?: string } }>(
@@ -15,7 +15,11 @@ export function registerRoomRoutes(app: FastifyInstance, clientOrigin: string): 
         return reply.status(400).send({ error: validationError });
       }
 
-      const room = registry.create(config, blueTeamName, redTeamName);
+      const room = registry.create(
+        config,
+        normalizeTeamName(blueTeamName),
+        normalizeTeamName(redTeamName),
+      );
 
       return reply.status(201).send({
         roomId: room.roomId,
