@@ -1,18 +1,23 @@
 import type { RoomRole } from "@os-drafter/shared";
 import type { TypedServer, TypedSocket } from "../types.js";
 import { registry } from "../RoomRegistry.js";
-import { validateDraftConfig } from "../validation.js";
+import { validateDraftConfig, normalizeTeamName } from "../validation.js";
 import type { Room } from "../Room.js";
 
 export function registerRoomHandlers(io: TypedServer, socket: TypedSocket): void {
-  socket.on("room:create", (config, callback) => {
-    const error = validateDraftConfig(config);
+  socket.on("room:create", (payload, callback) => {
+    const error = validateDraftConfig(payload);
     if (error) {
       socket.emit("error", error);
       return;
     }
 
-    const room = registry.create(config);
+    const { blueTeamName, redTeamName, ...config } = payload;
+    const room = registry.create(
+      config,
+      normalizeTeamName(blueTeamName),
+      normalizeTeamName(redTeamName),
+    );
 
     // Auto-join the creator as blue
     socket.data.roomId = room.roomId;

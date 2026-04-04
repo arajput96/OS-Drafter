@@ -136,12 +136,14 @@ export function RoomLinks({
       <RoomLink label={blueLabel} url={result.blueUrl} colorClass="text-team-blue" />
       <RoomLink label={redLabel} url={result.redUrl} colorClass="text-team-red" />
       <RoomLink label="Spectator" url={result.spectatorUrl} colorClass="text-muted-foreground" />
+      <RoomLink label="OBS Overlay" url={result.overlayUrl} colorClass="text-muted-foreground" />
 
       <CopyAllButton
         links={[
           { label: blueLabel, url: result.blueUrl },
           { label: redLabel, url: result.redUrl },
           { label: "Spectator", url: result.spectatorUrl },
+          { label: "OBS Overlay", url: result.overlayUrl },
         ]}
       />
     </div>

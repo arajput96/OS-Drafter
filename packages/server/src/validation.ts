@@ -57,7 +57,29 @@ export function validateDraftConfig(config: unknown): string | null {
     }
   }
 
+  // Validate optional team names (normalization is done by normalizeTeamName)
+  for (const field of ["blueTeamName", "redTeamName"] as const) {
+    if (c[field] !== undefined) {
+      if (typeof c[field] !== "string") {
+        return `${field} must be a string of at most 4 characters`;
+      }
+      const trimmed = (c[field] as string).trim();
+      if (trimmed.length > 4) {
+        return `${field} must be at most 4 characters`;
+      }
+    }
+  }
+
   return null;
+}
+
+/**
+ * Normalize a team name: trim, uppercase, and return undefined for blank.
+ */
+export function normalizeTeamName(name: string | undefined): string | undefined {
+  if (!name) return undefined;
+  const trimmed = name.trim().toUpperCase();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 /** Fastify JSON schema for DraftConfig body validation */
@@ -79,5 +101,7 @@ export const draftConfigSchema = {
       items: { type: "string" as const },
     },
     selectedMapName: { type: "string" as const },
+    blueTeamName: { type: "string" as const, maxLength: 4 },
+    redTeamName: { type: "string" as const, maxLength: 4 },
   },
 };

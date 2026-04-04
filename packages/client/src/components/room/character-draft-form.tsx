@@ -17,6 +17,8 @@ const MAP_OPTIONS = activeMaps.map((m) => ({
 export function CharacterDraftForm() {
   const [selectedMapName, setSelectedMapName] = useState(activeMaps[0]?.name ?? "");
   const [timerSeconds, setTimerSeconds] = useState(30);
+  const [blueTeamName, setBlueTeamName] = useState("");
+  const [redTeamName, setRedTeamName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CreateRoomResponse | null>(null);
@@ -40,7 +42,10 @@ export function CharacterDraftForm() {
         blueMapRole: "side_select",
         excludedMaps: [],
       };
-      const res = await createRoom(config);
+      const res = await createRoom(config, {
+        blueTeamName: blueTeamName || undefined,
+        redTeamName: redTeamName || undefined,
+      });
       setResult(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create room");
@@ -76,6 +81,31 @@ export function CharacterDraftForm() {
         max={120}
         onChange={setTimerSeconds}
       />
+
+      {/* Optional team names */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-muted-foreground">
+          Team Names <span className="text-muted-foreground/60">(optional, max 4 chars)</span>
+        </label>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            maxLength={4}
+            placeholder="Blue"
+            value={blueTeamName}
+            onChange={(e) => setBlueTeamName(e.target.value.toUpperCase())}
+            className="flex-1 rounded-lg border border-team-blue/30 bg-input px-3 py-2 text-sm text-team-blue placeholder:text-team-blue/40 outline-none focus:border-team-blue focus:ring-2 focus:ring-team-blue/30 uppercase"
+          />
+          <input
+            type="text"
+            maxLength={4}
+            placeholder="Red"
+            value={redTeamName}
+            onChange={(e) => setRedTeamName(e.target.value.toUpperCase())}
+            className="flex-1 rounded-lg border border-team-red/30 bg-input px-3 py-2 text-sm text-team-red placeholder:text-team-red/40 outline-none focus:border-team-red focus:ring-2 focus:ring-team-red/30 uppercase"
+          />
+        </div>
+      </div>
 
       {error && (
         <p className="text-sm text-destructive text-center">{error}</p>

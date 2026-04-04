@@ -149,6 +149,7 @@ function ShareLinks({
   const blueUrl = `${baseUrl}?role=blue`;
   const redUrl = `${baseUrl}?role=red`;
   const spectatorUrl = `${baseUrl}?role=spectator`;
+  const overlayUrl = `${baseUrl}/overlay`;
 
   return (
     <div className="flex flex-col gap-2">
@@ -158,6 +159,7 @@ function ShareLinks({
       <CopyLink label={blueLabel} url={blueUrl} />
       <CopyLink label={redLabel} url={redUrl} />
       <CopyLink label="Spectator" url={spectatorUrl} />
+      <CopyLink label="OBS Overlay" url={overlayUrl} />
       {baseUrl && (
         <CopyAllButton
           size="sm"
@@ -165,6 +167,7 @@ function ShareLinks({
             { label: blueLabel, url: blueUrl },
             { label: redLabel, url: redUrl },
             { label: "Spectator", url: spectatorUrl },
+            { label: "OBS Overlay", url: overlayUrl },
           ]}
         />
       )}

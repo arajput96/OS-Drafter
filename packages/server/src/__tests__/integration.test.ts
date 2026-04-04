@@ -791,7 +791,7 @@ describe("REST API", () => {
     await server.close();
   });
 
-  it("POST /rooms should create a room and return URLs", async () => {
+  it("POST /rooms should create a room and return URLs including overlay", async () => {
     const response = await server.app.inject({
       method: "POST",
       url: "/rooms",
@@ -805,6 +805,8 @@ describe("REST API", () => {
     expect(body.blueUrl).toContain(body.roomId);
     expect(body.redUrl).toContain(body.roomId);
     expect(body.spectatorUrl).toContain(body.roomId);
+    expect(body.overlayUrl).toContain(body.roomId);
+    expect(body.overlayUrl).toContain("/overlay");
   });
 
   it("POST /rooms should reject invalid config", async () => {
@@ -845,6 +847,79 @@ describe("REST API", () => {
     });
 
     expect(response.statusCode).toBe(404);
+  });
+
+  it("POST /rooms with team names should persist them in room state", async () => {
+    const createRes = await server.app.inject({
+      method: "POST",
+      url: "/rooms",
+      headers: { "content-type": "application/json" },
+      payload: { ...MAP_CONFIG, blueTeamName: "BOIS", redTeamName: "CALM" },
+    });
+
+    expect(createRes.statusCode).toBe(201);
+    const { roomId } = JSON.parse(createRes.body);
+
+    const getRes = await server.app.inject({
+      method: "GET",
+      url: `/rooms/${roomId}`,
+    });
+
+    const state = JSON.parse(getRes.body) as RoomState;
+    expect(state.blueTeamName).toBe("BOIS");
+    expect(state.redTeamName).toBe("CALM");
+  });
+
+  it("POST /rooms should normalize team names (trim + uppercase)", async () => {
+    const createRes = await server.app.inject({
+      method: "POST",
+      url: "/rooms",
+      headers: { "content-type": "application/json" },
+      payload: { ...MAP_CONFIG, blueTeamName: " ab ", redTeamName: "cd" },
+    });
+
+    expect(createRes.statusCode).toBe(201);
+    const { roomId } = JSON.parse(createRes.body);
+
+    const getRes = await server.app.inject({
+      method: "GET",
+      url: `/rooms/${roomId}`,
+    });
+
+    const state = JSON.parse(getRes.body) as RoomState;
+    expect(state.blueTeamName).toBe("AB");
+    expect(state.redTeamName).toBe("CD");
+  });
+
+  it("POST /rooms should omit team names when whitespace-only", async () => {
+    const createRes = await server.app.inject({
+      method: "POST",
+      url: "/rooms",
+      headers: { "content-type": "application/json" },
+      payload: { ...MAP_CONFIG, blueTeamName: "   " },
+    });
+
+    expect(createRes.statusCode).toBe(201);
+    const { roomId } = JSON.parse(createRes.body);
+
+    const getRes = await server.app.inject({
+      method: "GET",
+      url: `/rooms/${roomId}`,
+    });
+
+    const state = JSON.parse(getRes.body) as RoomState;
+    expect(state.blueTeamName).toBeUndefined();
+  });
+
+  it("POST /rooms should reject team names longer than 4 chars", async () => {
+    const response = await server.app.inject({
+      method: "POST",
+      url: "/rooms",
+      headers: { "content-type": "application/json" },
+      payload: { ...MAP_CONFIG, blueTeamName: "ABCDE" },
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 
   it("GET /health should return ok", async () => {

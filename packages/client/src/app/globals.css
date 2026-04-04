@@ -137,3 +137,32 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* OBS Overlay styles — override root layout's body background and sizing */
+html:has(.overlay-root),
+body:has(.overlay-root),
+body.overlay-active {
+  background: transparent !important;
+  min-height: auto !important;
+  height: auto !important;
+}
+
+body:has(.overlay-root),
+body.overlay-active {
+  display: block !important;
+}
+
+.overlay-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Overlay team colors — brighter for broadcast visibility */
+:root {
+  --overlay-blue: #00bfff;
+  --overlay-red: #ff2d78;
+}

@@ -11,13 +11,13 @@ import type { DraftConfig } from "@os-drafter/shared";
 class RoomRegistry {
   private rooms = new Map<string, Room>();
 
-  create(config: DraftConfig): Room {
+  create(config: DraftConfig, blueTeamName?: string, redTeamName?: string): Room {
     let roomId: string;
     do {
       roomId = crypto.randomUUID().slice(0, 8);
     } while (this.rooms.has(roomId));
 
-    const room = new Room(roomId, config);
+    const room = new Room(roomId, config, blueTeamName, redTeamName);
     this.rooms.set(roomId, room);
     return room;
   }
