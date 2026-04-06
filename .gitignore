@@ -1,12 +1,7 @@
 node_modules/
 dist/
-.next/
-.turbo/
+.partykit/
 *.tsbuildinfo
 .env
-.env.local
-.env.*.local
-.DS_Store
-PLAN.md
-.vercel
-.claude/
+.env.*
+!.env.example

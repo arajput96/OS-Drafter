@@ -1,0 +1,14 @@
+{
+  "name": "os-drafter",
+  "main": "src/server/draft-room.ts",
+  "serve": {
+    "path": "dist",
+    "singlePageApp": true
+  },
+  "build": {
+    "command": "npx vite build",
+    "watch": "src/client"
+  },
+  "port": 1999,
+  "compatibilityDate": "2024-09-27"
+}
