@@ -2,7 +2,7 @@
 
 import type { DraftState, Team } from "@os-drafter/shared";
 import { CharacterGrid } from "./character-grid";
-import { TeamPanel } from "./team-panel";
+import { BottomTeamBar } from "./bottom-team-bar";
 import { Button } from "@/components/ui/button";
 import { Lock, Ban } from "lucide-react";
 
@@ -34,24 +34,21 @@ export function CharacterDraftPhase({
       : false;
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
-      {/* Blue Team Panel */}
-      <div className="order-1 lg:order-1 lg:w-52 shrink-0">
-        <TeamPanel team="blue" draft={draft} />
-      </div>
-
-      {/* Center: Grid + Lock-in */}
-      <div className="order-3 lg:order-2 flex-1 flex flex-col gap-4">
-        <CharacterGrid
-          draft={draft}
-          myTeam={myTeam}
-          selectedId={selectedId}
-          onSelect={onSelect}
-        />
+    <div className="flex flex-col h-full">
+      {/* Centered grid + buttons */}
+      <div className="flex-1 flex flex-col items-center gap-3 min-h-0">
+        <div className="w-full max-w-3xl overflow-y-auto px-2">
+          <CharacterGrid
+            draft={draft}
+            myTeam={myTeam}
+            selectedId={selectedId}
+            onSelect={onSelect}
+          />
+        </div>
 
         {/* Lock-in button area */}
         {myTeam && (
-          <div className="flex justify-center">
+          <div className="flex justify-center shrink-0">
             {hasPending ? (
               <p className="text-sm text-muted-foreground animate-pulse">
                 Waiting for opponent...
@@ -85,10 +82,8 @@ export function CharacterDraftPhase({
         )}
       </div>
 
-      {/* Red Team Panel */}
-      <div className="order-2 lg:order-3 lg:w-52 shrink-0">
-        <TeamPanel team="red" draft={draft} />
-      </div>
+      {/* Bottom team bar */}
+      <BottomTeamBar draft={draft} className="shrink-0 pt-4" />
     </div>
   );
 }
