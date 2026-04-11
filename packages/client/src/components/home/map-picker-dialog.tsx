@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Dialog } from "@base-ui/react/dialog";
-import { X, Check, MapPin } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
 import { MAPS } from "@os-drafter/shared";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -44,39 +44,11 @@ export function MapPickerDialog({ selectedMaps, onChange, minSelected = 7 }: Map
     setOpen(false);
   };
 
-  // Excluded = active maps not in selectedMaps
-  const excludedMaps = activeMaps.filter((m) => !selectedMaps.includes(m.id));
-
-  const addBack = (mapId: string) => {
-    onChange([...selectedMaps, mapId]);
-  };
-
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-medium text-muted-foreground">
         Map Pool ({selectedMaps.length} selected)
       </label>
-
-      {/* Chips for excluded maps */}
-      {excludedMaps.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {excludedMaps.map((map) => (
-            <span
-              key={map.id}
-              className="inline-flex items-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive"
-            >
-              {map.name}
-              <button
-                type="button"
-                onClick={() => addBack(map.id)}
-                className="rounded-sm hover:bg-destructive/20 transition-colors"
-              >
-                <X className="size-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
 
       <Dialog.Root open={open} onOpenChange={handleOpenChange}>
         <Dialog.Trigger

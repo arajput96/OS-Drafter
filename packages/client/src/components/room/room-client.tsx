@@ -33,7 +33,7 @@ export function RoomClient({ roomId, role }: RoomClientProps) {
   if (!connected || !room) {
     const isReconnecting = wasConnected.current;
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center pt-14">
         <div className="flex flex-col items-center gap-3">
           <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           <p className="text-sm text-muted-foreground">
@@ -48,7 +48,7 @@ export function RoomClient({ roomId, role }: RoomClientProps) {
   // Waiting for draft to start
   if (!draft || draft.phase === "WAITING") {
     return (
-      <main className="flex min-h-screen items-center justify-center p-4">
+      <main className="flex min-h-screen items-center justify-center pt-14 p-4">
         <WaitingRoom room={room} role={role} onStart={startDraft} />
         <ErrorToast />
       </main>
@@ -57,7 +57,7 @@ export function RoomClient({ roomId, role }: RoomClientProps) {
 
   // Active draft or complete
   return (
-    <main className="min-h-screen p-4 lg:p-6">
+    <main className="min-h-screen pt-14 px-4 pb-4 lg:px-6 lg:pb-6">
       <DraftBoard
         draft={draft}
         room={room}
