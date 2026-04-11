@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import type { DraftConfig, DraftState, RoomState } from "@os-drafter/shared";
-import { CHARACTERS, MAPS, NO_BAN } from "@os-drafter/shared";
+import { CHARACTERS, MAPS, NO_BAN, CURRENT_AWAKENING_POOL, AWAKENING_EXCLUSIONS } from "@os-drafter/shared";
 import {
   createTestServer,
   createTestClient,
@@ -1008,4 +1008,188 @@ describe("Character Timer Expiry", () => {
     expect(state.blueTeamBans).toContain(characterIds[0]);
     expect(state.redTeamBans).toHaveLength(0);
   }, 10000);
+});
+
+// ════════════════════════════════════════════════════
+// Suite H: Awakening Config Validation
+// ════════════════════════════════════════════════════
+
+describe("Awakening Config Validation", () => {
+  let server: TestServer;
+
+  beforeAll(async () => {
+    server = await createTestServer();
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  const post = (payload: Record<string, unknown>) =>
+    server.app.inject({
+      method: "POST",
+      url: "/rooms",
+      headers: { "content-type": "application/json" },
+      payload,
+    });
+
+  it("should accept chosenAwakenings with a valid pair", async () => {
+    const [a, b] = CURRENT_AWAKENING_POOL.slice(0, 2);
+    const res = await post({ ...CHAR_CONFIG, chosenAwakenings: [a, b] });
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("should reject chosenAwakenings with only 1 element", async () => {
+    const res = await post({ ...CHAR_CONFIG, chosenAwakenings: [CURRENT_AWAKENING_POOL[0]] });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject chosenAwakenings with duplicate IDs", async () => {
+    const a = CURRENT_AWAKENING_POOL[0];
+    const res = await post({ ...CHAR_CONFIG, chosenAwakenings: [a, a] });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject chosenAwakenings that violate exclusion rules", async () => {
+    // Find a pair that actually has an exclusion
+    const [first] = Object.keys(AWAKENING_EXCLUSIONS);
+    const excluded = AWAKENING_EXCLUSIONS[first]![0]!;
+    const res = await post({ ...CHAR_CONFIG, chosenAwakenings: [first, excluded] });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject chosenAwakenings with invalid pool IDs", async () => {
+    const res = await post({ ...CHAR_CONFIG, chosenAwakenings: ["fake-id", "also-fake"] });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should accept excludedAwakenings with valid IDs", async () => {
+    const res = await post({
+      ...CHAR_CONFIG,
+      excludedAwakenings: CURRENT_AWAKENING_POOL.slice(0, 3),
+    });
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("should reject excludedAwakenings with invalid IDs", async () => {
+    const res = await post({ ...CHAR_CONFIG, excludedAwakenings: ["not-real"] });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject excludedAwakenings that leave fewer than 2 in pool", async () => {
+    // Exclude all but 1
+    const res = await post({
+      ...CHAR_CONFIG,
+      excludedAwakenings: CURRENT_AWAKENING_POOL.slice(0, CURRENT_AWAKENING_POOL.length - 1),
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject both chosenAwakenings and excludedAwakenings together", async () => {
+    const [a, b] = CURRENT_AWAKENING_POOL.slice(0, 2);
+    const res = await post({
+      ...CHAR_CONFIG,
+      chosenAwakenings: [a, b],
+      excludedAwakenings: [CURRENT_AWAKENING_POOL[2]],
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should use chosenAwakenings as revealed awakenings in room state", async () => {
+    const [a, b] = CURRENT_AWAKENING_POOL.slice(0, 2);
+    const res = await post({ ...CHAR_CONFIG, chosenAwakenings: [a, b] });
+    const { roomId } = JSON.parse(res.body);
+
+    const getRes = await server.app.inject({ method: "GET", url: `/rooms/${roomId}` });
+    const state = JSON.parse(getRes.body) as RoomState;
+    expect(state.revealedAwakenings).toEqual([a, b]);
+  });
+
+  it("should not reveal excluded awakenings in random mode", async () => {
+    const excluded = CURRENT_AWAKENING_POOL.slice(0, 5);
+    const res = await post({ ...CHAR_CONFIG, excludedAwakenings: excluded });
+    const { roomId } = JSON.parse(res.body);
+
+    const getRes = await server.app.inject({ method: "GET", url: `/rooms/${roomId}` });
+    const state = JSON.parse(getRes.body) as RoomState;
+    expect(state.revealedAwakenings).not.toBeNull();
+    for (const id of excluded) {
+      expect(state.revealedAwakenings).not.toContain(id);
+    }
+  });
+});
+
+// ════════════════════════════════════════════════════
+// Suite I: Map Pool Validation
+// ════════════════════════════════════════════════════
+
+describe("Map Pool Validation", () => {
+  let server: TestServer;
+
+  beforeAll(async () => {
+    server = await createTestServer();
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  const post = (payload: Record<string, unknown>) =>
+    server.app.inject({
+      method: "POST",
+      url: "/rooms",
+      headers: { "content-type": "application/json" },
+      payload,
+    });
+
+  it("should accept 0 excluded maps (full pool)", async () => {
+    const res = await post({ ...MAP_CONFIG, excludedMaps: [] });
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("should accept fewer than 3 excluded maps for bo1", async () => {
+    const res = await post({
+      ...MAP_CONFIG,
+      mapBanMode: "bo1",
+      excludedMaps: [activeMaps[0]!.id],
+    });
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("should reject pool below minimum for bo3", async () => {
+    // Exclude 4 maps → pool = 6, but bo3 needs 7
+    const res = await post({
+      ...MAP_CONFIG,
+      mapBanMode: "bo3",
+      excludedMaps: activeMaps.slice(0, 4).map(m => m.id),
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject pool below minimum for bo1", async () => {
+    // Exclude 7 maps → pool = 3, but bo1 needs 4
+    const res = await post({
+      ...MAP_CONFIG,
+      mapBanMode: "bo1",
+      excludedMaps: activeMaps.slice(0, 7).map(m => m.id),
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject invalid map IDs", async () => {
+    const res = await post({
+      ...MAP_CONFIG,
+      excludedMaps: ["nonexistent-map"],
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should reject duplicate map IDs", async () => {
+    const id = activeMaps[0]!.id;
+    const res = await post({
+      ...MAP_CONFIG,
+      excludedMaps: [id, id],
+    });
+    expect(res.statusCode).toBe(400);
+  });
 });

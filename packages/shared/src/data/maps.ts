@@ -12,3 +12,14 @@ export const MAPS: readonly GameMap[] = [
   { id: "oni-village", name: "Oni Village", icon: "/assets/maps/Oni_Village.png", active: true, description: "" },
   { id: "taiko-temple", name: "Taiko Temple", icon: "/assets/maps/Taiko_Temple.png", active: true, description: "" },
 ] as const;
+
+/** Default competitive map pool — the 7 maps currently used in competitive play. */
+export const DEFAULT_MAP_POOL: readonly string[] = [
+  "ai-mis-app",
+  "atlas-lab",
+  "demon-dais",
+  "gates-of-obscura",
+  "inkys-splash-zone",
+  "night-market",
+  "oni-village",
+];

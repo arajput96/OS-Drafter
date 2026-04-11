@@ -43,7 +43,7 @@ export function DraftBoard({
   const isCharPhase = draft.phase === "CHAR_BAN" || draft.phase === "CHAR_PICK";
 
   return (
-    <div className={isCharPhase ? "flex flex-col h-[calc(100vh-2rem)]" : "flex flex-col gap-4"}>
+    <div className={isCharPhase ? "flex flex-col h-[calc(100vh-4.5rem)]" : "flex flex-col gap-4"}>
       {/* Opponent disconnect banner */}
       {opponentDisconnected && draft.phase !== "COMPLETE" && (
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-center text-sm text-yellow-400 shrink-0">
