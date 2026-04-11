@@ -3,5 +3,5 @@ export default function OverlayLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="overlay-root">{children}</div>;
+  return <div className="overlay-root min-h-screen">{children}</div>;
 }

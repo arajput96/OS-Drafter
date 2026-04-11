@@ -51,12 +51,12 @@ export function OverlayMapCard({
         {map && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={map.icon}
+            src={map.mapIcon || map.icon}
             alt={map.name}
             width={160}
             height={90}
             style={{
-              objectFit: "cover",
+              objectFit: map.mapIcon ? "contain" : "cover",
               width: "100%",
               height: "100%",
               filter: status === "banned" ? "grayscale(0.7) brightness(0.5)" : "none",

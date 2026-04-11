@@ -14,11 +14,16 @@ interface OverlayClientProps {
 export function OverlayClient({ roomId, darkBg }: OverlayClientProps) {
   useSocket(roomId, "spectator");
 
-  // Add overlay class to body so CSS can override root layout styles
+  // Force dark background for overlay pages — must use !important to override
+  // Next.js not-found template which injects body{background:#fff} inline
   useEffect(() => {
     document.body.classList.add("overlay-active");
+    document.documentElement.style.setProperty("background", "#0d0d12", "important");
+    document.body.style.setProperty("background", "#0d0d12", "important");
     return () => {
       document.body.classList.remove("overlay-active");
+      document.documentElement.style.removeProperty("background");
+      document.body.style.removeProperty("background");
     };
   }, []);
 
