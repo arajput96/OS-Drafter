@@ -132,6 +132,10 @@
   --sidebar-ring: #7ea0dc;
 }
 
+html {
+  background: var(--background);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -159,6 +163,16 @@ body.overlay-active {
   background: transparent !important;
   min-height: auto !important;
   height: auto !important;
+}
+
+.overlay-root {
+  background: transparent !important;
+}
+
+/* Override Next.js not-found inline style that sets body background to white */
+body.overlay-active {
+  background: #0d0d12 !important;
+  color: #fff !important;
 }
 
 body:has(.overlay-root),

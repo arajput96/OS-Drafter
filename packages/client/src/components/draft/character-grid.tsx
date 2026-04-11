@@ -1,8 +1,23 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { Ban, UserPlus } from "lucide-react";
 import { CHARACTERS } from "@os-drafter/shared";
 import type { DraftState, Team } from "@os-drafter/shared";
+import { cn } from "@/lib/utils";
 import { CharacterCard, type CharacterCardState } from "./character-card";
+
+const gridContainer = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.02 },
+  },
+};
+
+const gridItem = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" as const } },
+};
 
 interface CharacterGridProps {
   draft: DraftState;
@@ -60,31 +75,44 @@ export function CharacterGrid({
 
   return (
     <div>
-      <p className="mb-2 text-center text-sm font-medium uppercase tracking-wider text-muted-foreground">
+      <div className={cn(
+        "mb-3 flex items-center justify-center gap-2 rounded-md py-1.5 text-sm font-medium uppercase tracking-wider",
+        draft.currentTurn === "blue" && "bg-team-blue/10 text-team-blue",
+        draft.currentTurn === "red" && "bg-team-red/10 text-team-red",
+        draft.currentTurn === "both" && "bg-primary/10 text-primary",
+      )}>
+        {draft.phase === "CHAR_BAN" ? <Ban className="size-4" /> : <UserPlus className="size-4" />}
         {headerText}
-      </p>
-      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
-      {CHARACTERS.map((character) => {
-        const state = getCharacterState(
-          character.id,
-          draft,
-          myTeam,
-          selectedId,
-        );
-        return (
-          <CharacterCard
-            key={character.id}
-            character={character}
-            state={state}
-            onClick={
-              canInteract && state === "available"
-                ? () => onSelect?.(character.id)
-                : undefined
-            }
-          />
-        );
-      })}
       </div>
+      <motion.div
+        key={draft.phase}
+        className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-7"
+        variants={gridContainer}
+        initial="hidden"
+        animate="visible"
+      >
+        {CHARACTERS.map((character) => {
+          const state = getCharacterState(
+            character.id,
+            draft,
+            myTeam,
+            selectedId,
+          );
+          return (
+            <motion.div key={character.id} variants={gridItem} className="w-full">
+              <CharacterCard
+                character={character}
+                state={state}
+                onClick={
+                  canInteract && state === "available"
+                    ? () => onSelect?.(character.id)
+                    : undefined
+                }
+              />
+            </motion.div>
+          );
+        })}
+      </motion.div>
     </div>
   );
 }

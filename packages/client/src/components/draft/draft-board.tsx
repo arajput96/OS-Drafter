@@ -1,6 +1,7 @@
 "use client";
 
 import type { DraftState, RoomState, Team } from "@os-drafter/shared";
+import { cn } from "@/lib/utils";
 import { PhaseBanner } from "@/components/ui/phase-banner";
 import { TimerDisplay } from "@/components/ui/timer-display";
 import { MapBanPhase } from "./map-ban-phase";
@@ -43,7 +44,7 @@ export function DraftBoard({
   const isCharPhase = draft.phase === "CHAR_BAN" || draft.phase === "CHAR_PICK";
 
   return (
-    <div className={isCharPhase ? "flex flex-col h-[calc(100vh-4.5rem)]" : "flex flex-col gap-4"}>
+    <div className={isCharPhase ? "flex flex-col h-[calc(100vh-3.5rem)]" : "flex flex-col gap-4"}>
       {/* Opponent disconnect banner */}
       {opponentDisconnected && draft.phase !== "COMPLETE" && (
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-center text-sm text-yellow-400 shrink-0">
@@ -60,7 +61,7 @@ export function DraftBoard({
       {draft.phase !== "COMPLETE" && (
         isCharPhase ? (
           /* Compact horizontal top bar for character draft */
-          <div className="grid grid-cols-3 items-center px-2 py-2 shrink-0">
+          <div className="grid grid-cols-3 items-center px-2 py-3 shrink-0">
             <div className="flex flex-col gap-0.5">
               <PhaseBanner phase={draft.phase} myTeam={myTeam} className="text-sm text-left" />
               <TurnIndicator
@@ -70,8 +71,8 @@ export function DraftBoard({
                 phase={draft.phase}
               />
             </div>
-            <div className="flex flex-col items-center gap-1">
-              <TimerDisplay seconds={timerRemaining} className="text-3xl" />
+            <div className="flex flex-col items-center gap-2">
+              <TimerDisplay seconds={timerRemaining} maxSeconds={draft.config.timerSeconds} className="text-3xl" />
               {isCharacterDraft && revealedAwakenings && (
                 <AwakeningDisplay awakeningIds={revealedAwakenings} showLabel={false} large />
               )}

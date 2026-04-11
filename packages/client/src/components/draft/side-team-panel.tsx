@@ -5,6 +5,7 @@ import { BottomPickCard } from "./bottom-pick-card";
 interface SideTeamPanelProps {
   team: Team;
   draft: DraftState;
+  previewId?: string | null;
   className?: string;
 }
 
@@ -26,7 +27,7 @@ function padSlots(arr: (string | null)[], total: number): (string | null)[] {
   return [...arr, ...Array<null>(total - arr.length).fill(null)];
 }
 
-export function SideTeamPanel({ team, draft, className }: SideTeamPanelProps) {
+export function SideTeamPanel({ team, draft, previewId, className }: SideTeamPanelProps) {
   const { numBans, numPicks } = draft.config;
   const bans = padSlots(
     team === "blue" ? draft.blueTeamBans : draft.redTeamBans,
@@ -59,24 +60,32 @@ export function SideTeamPanel({ team, draft, className }: SideTeamPanelProps) {
         {isBlue ? "Blue" : "Red"}
       </div>
       <div className="flex flex-col gap-1.5">
-        {bans.map((id, i) => (
-          <BottomPickCard
-            key={`${team}-ban-${i}`}
-            characterId={id}
-            team={team}
-            slotType="ban"
-            isActive={isSlotActive("ban", i)}
-          />
-        ))}
-        {picks.map((id, i) => (
-          <BottomPickCard
-            key={`${team}-pick-${i}`}
-            characterId={id}
-            team={team}
-            slotType="pick"
-            isActive={isSlotActive("pick", i)}
-          />
-        ))}
+        {bans.map((id, i) => {
+          const slotActive = isSlotActive("ban", i);
+          return (
+            <BottomPickCard
+              key={`${team}-ban-${i}`}
+              characterId={id}
+              team={team}
+              slotType="ban"
+              isActive={slotActive}
+              previewId={slotActive && !id ? previewId : undefined}
+            />
+          );
+        })}
+        {picks.map((id, i) => {
+          const slotActive = isSlotActive("pick", i);
+          return (
+            <BottomPickCard
+              key={`${team}-pick-${i}`}
+              characterId={id}
+              team={team}
+              slotType="pick"
+              isActive={slotActive}
+              previewId={slotActive && !id ? previewId : undefined}
+            />
+          );
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import type { DraftState, Team } from "@os-drafter/shared";
+import { cn } from "@/lib/utils";
+import { characterMap } from "@/lib/character-utils";
 import { CharacterGrid } from "./character-grid";
 import { SideTeamPanel } from "./side-team-panel";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ export function CharacterDraftPhase({
   const isMyTurn =
     draft.currentTurn === "both" || draft.currentTurn === myTeam;
   const canLock = isMyTurn && selectedId !== null && myTeam !== null;
+  const selectedCharacter = selectedId ? characterMap.get(selectedId) : null;
 
   // Check if we already have a pending action (simultaneous mode)
   const hasPending =
@@ -37,7 +40,7 @@ export function CharacterDraftPhase({
     <div className="flex h-full gap-4 lg:gap-6">
       {/* Blue Team Panel — left side */}
       <div className="hidden lg:flex shrink-0">
-        <SideTeamPanel team="blue" draft={draft} />
+        <SideTeamPanel team="blue" draft={draft} previewId={myTeam === "blue" ? selectedId : null} />
       </div>
 
       {/* Center: Grid + Lock-in */}
@@ -76,10 +79,11 @@ export function CharacterDraftPhase({
                   onClick={onLockIn}
                   disabled={!canLock}
                   size="lg"
-                  className="gap-2 px-8"
+                  variant="gradient"
+                  className={cn("gap-2 px-8 transition-transform", canLock && "scale-105")}
                 >
                   <Lock className="size-4" />
-                  Lock In
+                  {selectedCharacter ? `Lock In ${selectedCharacter.name}` : "Lock In"}
                 </Button>
               </div>
             )}
@@ -89,7 +93,7 @@ export function CharacterDraftPhase({
 
       {/* Red Team Panel — right side */}
       <div className="hidden lg:flex shrink-0">
-        <SideTeamPanel team="red" draft={draft} />
+        <SideTeamPanel team="red" draft={draft} previewId={myTeam === "red" ? selectedId : null} />
       </div>
     </div>
   );

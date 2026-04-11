@@ -25,7 +25,7 @@ export function CharacterCard({ character, state, onClick }: CharacterCardProps)
       onClick={isClickable ? onClick : undefined}
       disabled={!isClickable}
       className={cn(
-        "group relative flex flex-col items-center gap-1 rounded-lg border p-1.5 transition-all",
+        "group relative flex w-full flex-col items-center gap-1 rounded-lg border p-1.5 transition-all",
         state === "available" &&
           "border-border bg-secondary hover:border-primary hover:bg-secondary/80 cursor-pointer",
         state === "selected" &&
@@ -51,8 +51,10 @@ export function CharacterCard({ character, state, onClick }: CharacterCardProps)
           )}
         />
         {state === "banned" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-destructive/30">
-            <X className="text-destructive" />
+          <div className="absolute inset-0 bg-destructive/20">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full">
+              <line x1="0" y1="0" x2="100" y2="100" stroke="currentColor" strokeWidth="4" className="text-destructive" />
+            </svg>
           </div>
         )}
       </div>
@@ -60,20 +62,5 @@ export function CharacterCard({ character, state, onClick }: CharacterCardProps)
         {character.name}
       </span>
     </button>
-  );
-}
-
-function X({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={3}
-      className={cn("size-8", className)}
-    >
-      <line x1="4" y1="4" x2="20" y2="20" />
-      <line x1="20" y1="4" x2="4" y2="20" />
-    </svg>
   );
 }

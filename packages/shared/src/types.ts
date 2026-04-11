@@ -10,6 +10,7 @@ export interface GameMap {
   id: string;
   name: string;
   icon: string;
+  mapIcon?: string;
   active: boolean;
   description: string;
 }

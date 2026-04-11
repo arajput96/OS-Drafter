@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import type { RoomRole } from "@os-drafter/shared";
+import { cn } from "@/lib/utils";
 import { useSocket } from "@/hooks/use-socket";
 import { useDraftStore } from "@/store/draft-store";
 import { ErrorToast } from "@/components/ui/error-toast";
@@ -56,8 +57,14 @@ export function RoomClient({ roomId, role }: RoomClientProps) {
   }
 
   // Active draft or complete
+  const isCharPhase = draft.phase === "CHAR_BAN" || draft.phase === "CHAR_PICK";
   return (
-    <main className="min-h-screen pt-14 px-4 pb-4 lg:px-6 lg:pb-6">
+    <main className={cn(
+      "min-h-screen pt-14 px-4 lg:px-6 transition-colors duration-500",
+      !isCharPhase && "pb-4 lg:pb-6",
+      isCharPhase && draft.currentTurn === "blue" && "bg-team-blue/[0.03]",
+      isCharPhase && draft.currentTurn === "red" && "bg-team-red/[0.03]",
+    )}>
       <DraftBoard
         draft={draft}
         room={room}
