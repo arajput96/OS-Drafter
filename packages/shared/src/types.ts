@@ -54,6 +54,8 @@ export interface DraftConfig {
   blueMapRole: MapRole;
   excludedMaps: string[];
   selectedMapName?: string;
+  excludedAwakenings?: string[];
+  chosenAwakenings?: [string, string];
 }
 
 export type DraftAction =

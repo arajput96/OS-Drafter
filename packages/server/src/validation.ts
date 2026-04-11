@@ -1,4 +1,5 @@
 import type { DraftConfig } from "@os-drafter/shared";
+import { MAPS, CURRENT_AWAKENING_POOL, AWAKENING_EXCLUSIONS } from "@os-drafter/shared";
 
 const VALID_DRAFT_TYPES = ["map", "character"];
 const VALID_DRAFT_MODES = ["snake", "alternating", "simultaneous"];
@@ -32,11 +33,17 @@ export function validateDraftConfig(config: unknown): string | null {
     if (!VALID_MAP_ROLES.includes(c.blueMapRole as string)) {
       return `Invalid blueMapRole: must be one of ${VALID_MAP_ROLES.join(", ")}`;
     }
-    if (!Array.isArray(c.excludedMaps) || c.excludedMaps.length !== 3) {
-      return "excludedMaps must be an array of exactly 3 map IDs";
+    if (!Array.isArray(c.excludedMaps)) {
+      return "excludedMaps must be an array of map IDs";
     }
-    if (new Set(c.excludedMaps).size !== 3) {
-      return "excludedMaps must contain 3 distinct map IDs";
+    if (new Set(c.excludedMaps as string[]).size !== (c.excludedMaps as string[]).length) {
+      return "excludedMaps must contain distinct map IDs";
+    }
+    const activeMapCount = MAPS.filter(m => m.active).length;
+    const poolSize = activeMapCount - (c.excludedMaps as string[]).length;
+    const minPool = (c.mapBanMode as string) === "bo3" ? 7 : 4;
+    if (poolSize < minPool) {
+      return `Map pool too small: need at least ${minPool} maps for ${c.mapBanMode as string}`;
     }
   } else {
     // character draft
@@ -54,6 +61,47 @@ export function validateDraftConfig(config: unknown): string | null {
     }
     if (typeof c.numPicks !== "number" || c.numPicks < 1) {
       return "numPicks must be a positive integer";
+    }
+
+    // Validate optional awakening fields
+    if (c.chosenAwakenings !== undefined && c.excludedAwakenings !== undefined) {
+      return "Cannot specify both chosenAwakenings and excludedAwakenings";
+    }
+
+    if (c.chosenAwakenings !== undefined) {
+      if (!Array.isArray(c.chosenAwakenings) || c.chosenAwakenings.length !== 2) {
+        return "chosenAwakenings must be a pair of 2 awakening IDs";
+      }
+      const [a, b] = c.chosenAwakenings as [string, string];
+      if (a === b) {
+        return "chosenAwakenings must contain 2 distinct IDs";
+      }
+      const poolSet = new Set(CURRENT_AWAKENING_POOL);
+      if (!poolSet.has(a) || !poolSet.has(b)) {
+        return "chosenAwakenings must reference valid awakening pool IDs";
+      }
+      const exclusions = AWAKENING_EXCLUSIONS[a] ?? [];
+      if (exclusions.includes(b)) {
+        return "Chosen awakenings violate exclusion rules";
+      }
+    }
+
+    if (c.excludedAwakenings !== undefined) {
+      if (!Array.isArray(c.excludedAwakenings)) {
+        return "excludedAwakenings must be an array";
+      }
+      const poolSet = new Set(CURRENT_AWAKENING_POOL);
+      for (const id of c.excludedAwakenings as string[]) {
+        if (typeof id !== "string" || !poolSet.has(id)) {
+          return `Invalid excluded awakening ID: ${id}`;
+        }
+      }
+      const remaining = CURRENT_AWAKENING_POOL.filter(
+        id => !(c.excludedAwakenings as string[]).includes(id)
+      );
+      if (remaining.length < 2) {
+        return "Too many awakenings excluded: at least 2 must remain in the pool";
+      }
     }
   }
 
@@ -103,5 +151,15 @@ export const draftConfigSchema = {
     selectedMapName: { type: "string" as const },
     blueTeamName: { type: "string" as const, maxLength: 4 },
     redTeamName: { type: "string" as const, maxLength: 4 },
+    excludedAwakenings: {
+      type: "array" as const,
+      items: { type: "string" as const },
+    },
+    chosenAwakenings: {
+      type: "array" as const,
+      items: { type: "string" as const },
+      minItems: 2,
+      maxItems: 2,
+    },
   },
 };

@@ -46,7 +46,18 @@ export class Room {
 
     // For character drafts, reveal awakenings at room creation time
     if (config.draftType === "character" && CURRENT_AWAKENING_POOL.length >= 2) {
-      this.revealedAwakenings = pickTwoAwakenings(CURRENT_AWAKENING_POOL);
+      if (config.chosenAwakenings) {
+        this.revealedAwakenings = config.chosenAwakenings;
+      } else {
+        let pool = [...CURRENT_AWAKENING_POOL];
+        if (config.excludedAwakenings?.length) {
+          const excluded = new Set(config.excludedAwakenings);
+          pool = pool.filter(id => !excluded.has(id));
+        }
+        if (pool.length >= 2) {
+          this.revealedAwakenings = pickTwoAwakenings(pool);
+        }
+      }
     }
   }
 
