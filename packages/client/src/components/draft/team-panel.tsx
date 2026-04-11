@@ -58,7 +58,7 @@ export function TeamPanel({ team, draft, className }: TeamPanelProps) {
           <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
             Bans
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-col gap-1.5">
             {bans.map((id, i) => (
               <BanSlot
                 key={i}

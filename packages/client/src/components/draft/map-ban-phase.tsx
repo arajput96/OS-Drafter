@@ -7,11 +7,12 @@ import { MapCard, type MapCardState } from "./map-card";
 interface MapBanPhaseProps {
   draft: DraftState;
   myTeam: Team | null;
+  isComplete?: boolean;
   onBanMap?: (mapId: string) => void;
   onPickMap?: (mapId: string) => void;
 }
 
-export function MapBanPhase({ draft, myTeam, onBanMap, onPickMap }: MapBanPhaseProps) {
+export function MapBanPhase({ draft, myTeam, isComplete, onBanMap, onPickMap }: MapBanPhaseProps) {
   const bannedMaps = new Set([
     ...draft.mapBans.blueBans,
     ...draft.mapBans.redBans,
@@ -40,13 +41,15 @@ export function MapBanPhase({ draft, myTeam, onBanMap, onPickMap }: MapBanPhaseP
   // Filter to only maps in the pool (excludes excluded maps)
   const poolSet = new Set(draft.mapBans.mapPool);
 
-  const promptText = canAct
-    ? isMapPick
-      ? "Select a map to pick"
-      : "Select a map to ban"
-    : myTeam
-      ? "Waiting for opponent..."
-      : "Map phase in progress";
+  const promptText = isComplete
+    ? null
+    : canAct
+      ? isMapPick
+        ? "Select a map to pick"
+        : "Select a map to ban"
+      : myTeam
+        ? "Waiting for opponent..."
+        : "Map phase in progress";
 
   const handleClick = (mapId: string) => {
     if (isMapPick) {
@@ -58,7 +61,7 @@ export function MapBanPhase({ draft, myTeam, onBanMap, onPickMap }: MapBanPhaseP
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <p className="text-sm text-muted-foreground">{promptText}</p>
+      {promptText && <p className="text-sm text-muted-foreground">{promptText}</p>}
 
       {/* Bo3 Game Order Display */}
       {isBo3 && (
