@@ -1,7 +1,6 @@
 "use client";
 
 import type { DraftState, RoomState, Team } from "@os-drafter/shared";
-import { cn } from "@/lib/utils";
 import { PhaseBanner } from "@/components/ui/phase-banner";
 import { TimerDisplay } from "@/components/ui/timer-display";
 import { MapBanPhase } from "./map-ban-phase";

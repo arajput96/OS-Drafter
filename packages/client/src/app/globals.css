@@ -156,27 +156,12 @@ body {
               0 0 20px -5px rgba(126, 160, 220, 0.1);
 }
 
-/* OBS Overlay styles — override root layout's body background and sizing */
-html:has(.overlay-root),
-body:has(.overlay-root),
+/* OBS Overlay styles — override root layout's body background and sizing.
+   The actual background color (#0d0d12) is set via inline style in
+   overlay-client.tsx useEffect to override Next.js 404 template styles. */
 body.overlay-active {
-  background: transparent !important;
   min-height: auto !important;
   height: auto !important;
-}
-
-.overlay-root {
-  background: transparent !important;
-}
-
-/* Override Next.js not-found inline style that sets body background to white */
-body.overlay-active {
-  background: #0d0d12 !important;
-  color: #fff !important;
-}
-
-body:has(.overlay-root),
-body.overlay-active {
   display: block !important;
 }
 
