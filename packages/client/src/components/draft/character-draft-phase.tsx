@@ -2,7 +2,7 @@
 
 import type { DraftState, Team } from "@os-drafter/shared";
 import { CharacterGrid } from "./character-grid";
-import { BottomTeamBar } from "./bottom-team-bar";
+import { SideTeamPanel } from "./side-team-panel";
 import { Button } from "@/components/ui/button";
 import { Lock, Ban } from "lucide-react";
 
@@ -34,8 +34,13 @@ export function CharacterDraftPhase({
       : false;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Centered grid + buttons */}
+    <div className="flex h-full gap-4 lg:gap-6">
+      {/* Blue Team Panel — left side */}
+      <div className="hidden lg:flex shrink-0">
+        <SideTeamPanel team="blue" draft={draft} />
+      </div>
+
+      {/* Center: Grid + Lock-in */}
       <div className="flex-1 flex flex-col items-center gap-3 min-h-0">
         <div className="w-full max-w-3xl overflow-y-auto px-2">
           <CharacterGrid
@@ -82,8 +87,10 @@ export function CharacterDraftPhase({
         )}
       </div>
 
-      {/* Bottom team bar */}
-      <BottomTeamBar draft={draft} className="shrink-0 pt-4" />
+      {/* Red Team Panel — right side */}
+      <div className="hidden lg:flex shrink-0">
+        <SideTeamPanel team="red" draft={draft} />
+      </div>
     </div>
   );
 }

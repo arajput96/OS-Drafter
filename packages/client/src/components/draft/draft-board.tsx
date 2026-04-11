@@ -70,17 +70,17 @@ export function DraftBoard({
                 phase={draft.phase}
               />
             </div>
-            <div className="flex justify-center">
-              <TimerDisplay seconds={timerRemaining} className="text-2xl" />
+            <div className="flex flex-col items-center gap-1">
+              <TimerDisplay seconds={timerRemaining} className="text-3xl" />
+              {isCharacterDraft && revealedAwakenings && (
+                <AwakeningDisplay awakeningIds={revealedAwakenings} showLabel={false} large />
+              )}
             </div>
             <div className="flex flex-col items-end gap-1">
               {isCharacterDraft && draft.config.selectedMapName && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Map: <span className="font-semibold text-foreground">{draft.config.selectedMapName}</span>
                 </p>
-              )}
-              {isCharacterDraft && revealedAwakenings && (
-                <AwakeningDisplay awakeningIds={revealedAwakenings} />
               )}
             </div>
           </div>
