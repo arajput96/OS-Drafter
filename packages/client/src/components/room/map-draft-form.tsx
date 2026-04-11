@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DraftConfig, MapBanMode } from "@os-drafter/shared";
+import { DEFAULT_MAP_POOL, MAPS } from "@os-drafter/shared";
 import { Button } from "@/components/ui/button";
 import { createRoom, type CreateRoomResponse } from "@/lib/api";
 import { SelectField, NumberField, RoomLinks } from "./form-fields";
@@ -16,7 +17,7 @@ export function MapDraftForm() {
   const [config, setConfig] = useState({
     mapBanMode: "bo3" as MapBanMode,
     timerSeconds: 30,
-    excludedMaps: [] as string[],
+    selectedMaps: [...DEFAULT_MAP_POOL],
   });
   const [blueTeamName, setBlueTeamName] = useState("");
   const [redTeamName, setRedTeamName] = useState("");
@@ -29,11 +30,14 @@ export function MapDraftForm() {
     setLoading(true);
     setError(null);
     try {
+      const activeMapIds = MAPS.filter(m => m.active).map(m => m.id);
+      const selectedSet = new Set(config.selectedMaps);
+      const excludedMaps = activeMapIds.filter(id => !selectedSet.has(id));
       const fullConfig: DraftConfig = {
         draftType: "map",
         mapBanMode: config.mapBanMode,
         blueMapRole: "side_select",
-        excludedMaps: config.excludedMaps,
+        excludedMaps,
         timerSeconds: config.timerSeconds,
         // Character fields — defaults (not used for map drafts)
         draftMode: "snake",
@@ -54,8 +58,16 @@ export function MapDraftForm() {
     }
   };
 
+  const handleReset = () => {
+    setResult(null);
+    setConfig({ mapBanMode: "bo3", timerSeconds: 30, selectedMaps: [...DEFAULT_MAP_POOL] });
+    setBlueTeamName("");
+    setRedTeamName("");
+    setError(null);
+  };
+
   if (result) {
-    return <RoomLinks result={result} blueLabel="Side Select" redLabel="Map Select" />;
+    return <RoomLinks result={result} blueLabel="Side Select" redLabel="Map Select" onReset={handleReset} />;
   }
 
   return (
@@ -75,8 +87,9 @@ export function MapDraftForm() {
       />
 
       <MapPickerDialog
-        excludedMaps={config.excludedMaps}
-        onChange={(excluded) => setConfig({ ...config, excludedMaps: excluded })}
+        selectedMaps={config.selectedMaps}
+        onChange={(selected) => setConfig({ ...config, selectedMaps: selected })}
+        minSelected={config.mapBanMode === "bo3" ? 7 : 4}
       />
 
       <NumberField
@@ -119,7 +132,7 @@ export function MapDraftForm() {
       <Button
         type="submit"
         variant="gradient"
-        disabled={loading || config.excludedMaps.length !== 3}
+        disabled={loading || config.selectedMaps.length < (config.mapBanMode === "bo3" ? 7 : 4)}
         size="lg"
         className="w-full"
       >

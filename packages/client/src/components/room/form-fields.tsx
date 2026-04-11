@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, ClipboardList } from "lucide-react";
+import { Check, Copy, ClipboardList, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { CreateRoomResponse } from "@/lib/api";
 
 export function SelectField<T extends string>({
@@ -119,10 +120,12 @@ export function RoomLinks({
   result,
   blueLabel,
   redLabel,
+  onReset,
 }: {
   result: CreateRoomResponse;
   blueLabel: string;
   redLabel: string;
+  onReset?: () => void;
 }) {
   return (
     <div className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-5">
@@ -146,6 +149,13 @@ export function RoomLinks({
           { label: "OBS Overlay", url: result.overlayUrl },
         ]}
       />
+
+      {onReset && (
+        <Button type="button" variant="outline" onClick={onReset} className="w-full">
+          <RotateCcw className="size-4" />
+          Create Another
+        </Button>
+      )}
     </div>
   );
 }
