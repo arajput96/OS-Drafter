@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { toPng } from "html-to-image";
 import { Download } from "lucide-react";
 import type { DraftState, RoomState, Team } from "@os-drafter/shared";
+import { useDraftStore } from "@/store/draft-store";
 import { PhaseBanner } from "@/components/ui/phase-banner";
 import { TimerDisplay } from "@/components/ui/timer-display";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,13 @@ export function DraftBoard({
   const renderPhase = isComplete ? frozenPhase : draft.phase;
   const isCharPhase = renderPhase === "CHAR_BAN" || renderPhase === "CHAR_PICK";
 
+  // Override draft.phase for character draft children so they don't
+  // remount/re-animate when phase changes to COMPLETE (e.g. CharacterGrid
+  // uses key={draft.phase} which would replay the stagger animation).
+  const displayDraft = isComplete
+    ? { ...draft, phase: renderPhase } as DraftState
+    : draft;
+
   const opponentDisconnected =
     myTeam === "blue" ? !room.redConnected :
     myTeam === "red" ? !room.blueConnected :
@@ -72,6 +80,8 @@ export function DraftBoard({
       link.download = "draft-results.png";
       link.href = dataUrl;
       link.click();
+    } catch {
+      useDraftStore.getState().setError("Failed to generate image. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -171,7 +181,7 @@ export function DraftBoard({
       {isCharPhase && (
         <div className="flex-1 min-h-0">
           <CharacterDraftPhase
-            draft={draft}
+            draft={displayDraft}
             myTeam={myTeam}
             selectedId={isComplete ? null : selectedId}
             onSelect={isComplete ? undefined : onSelectCharacter}
