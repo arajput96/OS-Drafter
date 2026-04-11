@@ -72,7 +72,6 @@ export function MapPickerDialog({ selectedMaps, onChange, minSelected = 7 }: Map
               <div className="grid grid-cols-3 gap-3">
                 {activeMaps.map((map) => {
                   const isSelected = draftSet.has(map.id);
-                  const cannotDeselect = isSelected && draftSet.size <= minSelected;
                   return (
                     <button
                       key={map.id}

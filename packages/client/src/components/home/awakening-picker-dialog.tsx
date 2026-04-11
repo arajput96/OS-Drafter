@@ -145,6 +145,7 @@ export function AwakeningPickerDialog({
               {chip.name}
               <button
                 type="button"
+                aria-label={`Remove ${chip.name}`}
                 onClick={() => removeChip(chip.id)}
                 className="rounded-sm hover:bg-foreground/10 transition-colors"
               >

@@ -48,7 +48,7 @@ export function RoomClient({ roomId, role }: RoomClientProps) {
   // Waiting for draft to start
   if (!draft || draft.phase === "WAITING") {
     return (
-      <main className="flex min-h-screen items-center justify-center pt-14 p-4">
+      <main className="flex min-h-screen items-center justify-center pt-14 px-4 pb-4">
         <WaitingRoom room={room} role={role} onStart={startDraft} />
         <ErrorToast />
       </main>

@@ -36,11 +36,16 @@ export function validateDraftConfig(config: unknown): string | null {
     if (!Array.isArray(c.excludedMaps)) {
       return "excludedMaps must be an array of map IDs";
     }
+    const activeMapIds = new Set(MAPS.filter(m => m.active).map(m => m.id));
+    for (const id of c.excludedMaps as string[]) {
+      if (typeof id !== "string" || !activeMapIds.has(id)) {
+        return `Invalid excluded map ID: ${id}`;
+      }
+    }
     if (new Set(c.excludedMaps as string[]).size !== (c.excludedMaps as string[]).length) {
       return "excludedMaps must contain distinct map IDs";
     }
-    const activeMapCount = MAPS.filter(m => m.active).length;
-    const poolSize = activeMapCount - (c.excludedMaps as string[]).length;
+    const poolSize = activeMapIds.size - (c.excludedMaps as string[]).length;
     const minPool = (c.mapBanMode as string) === "bo3" ? 7 : 4;
     if (poolSize < minPool) {
       return `Map pool too small: need at least ${minPool} maps for ${c.mapBanMode as string}`;
