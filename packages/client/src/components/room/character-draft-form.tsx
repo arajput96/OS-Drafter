@@ -6,6 +6,7 @@ import { MAPS } from "@os-drafter/shared";
 import { Button } from "@/components/ui/button";
 import { createRoom, type CreateRoomResponse } from "@/lib/api";
 import { SelectField, NumberField, RoomLinks } from "./form-fields";
+import { AwakeningPickerDialog } from "@/components/home/awakening-picker-dialog";
 
 const activeMaps = MAPS.filter((m) => m.active);
 
@@ -22,6 +23,9 @@ export function CharacterDraftForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CreateRoomResponse | null>(null);
+  const [awakeningMode, setAwakeningMode] = useState<"random" | "choose">("random");
+  const [excludedAwakenings, setExcludedAwakenings] = useState<string[]>([]);
+  const [chosenAwakenings, setChosenAwakenings] = useState<[string, string] | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +45,11 @@ export function CharacterDraftForm() {
         mapBanMode: "bo1",
         blueMapRole: "side_select",
         excludedMaps: [],
+        ...(awakeningMode === "choose" && chosenAwakenings
+          ? { chosenAwakenings }
+          : excludedAwakenings.length > 0
+            ? { excludedAwakenings }
+            : {}),
       };
       const res = await createRoom(config, {
         blueTeamName: blueTeamName || undefined,
@@ -54,8 +63,20 @@ export function CharacterDraftForm() {
     }
   };
 
+  const handleReset = () => {
+    setResult(null);
+    setSelectedMapName(activeMaps[0]?.name ?? "");
+    setTimerSeconds(30);
+    setBlueTeamName("");
+    setRedTeamName("");
+    setError(null);
+    setAwakeningMode("random");
+    setExcludedAwakenings([]);
+    setChosenAwakenings(null);
+  };
+
   if (result) {
-    return <RoomLinks result={result} blueLabel="Blue" redLabel="Red" />;
+    return <RoomLinks result={result} blueLabel="Blue" redLabel="Red" onReset={handleReset} />;
   }
 
   return (
@@ -72,6 +93,15 @@ export function CharacterDraftForm() {
         value={selectedMapName}
         options={MAP_OPTIONS}
         onChange={setSelectedMapName}
+      />
+
+      <AwakeningPickerDialog
+        mode={awakeningMode}
+        onModeChange={setAwakeningMode}
+        excludedAwakenings={excludedAwakenings}
+        onExcludedChange={setExcludedAwakenings}
+        chosenAwakenings={chosenAwakenings}
+        onChosenChange={setChosenAwakenings}
       />
 
       <NumberField
@@ -114,7 +144,7 @@ export function CharacterDraftForm() {
       <Button
         type="submit"
         variant="gradient"
-        disabled={loading || !selectedMapName}
+        disabled={loading || !selectedMapName || (awakeningMode === "choose" && !chosenAwakenings)}
         size="lg"
         className="w-full"
       >
