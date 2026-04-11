@@ -55,8 +55,15 @@ export function CharacterGrid({
     draft.phase === "CHAR_BAN" || draft.phase === "CHAR_PICK";
   const canInteract = isMyTurn && isCharPhase && myTeam !== null;
 
+  const headerText =
+    draft.phase === "CHAR_BAN" ? "Ban a Striker" : "Choose a Striker";
+
   return (
-    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
+    <div>
+      <p className="mb-2 text-center text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        {headerText}
+      </p>
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
       {CHARACTERS.map((character) => {
         const state = getCharacterState(
           character.id,
@@ -77,6 +84,7 @@ export function CharacterGrid({
           />
         );
       })}
+      </div>
     </div>
   );
 }
