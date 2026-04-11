@@ -61,7 +61,7 @@ export function CharacterDraftForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-5"
+      className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-5 card-glow"
     >
       <h2 className="text-center text-xl font-bold text-primary">
         Character Draft
@@ -113,6 +113,7 @@ export function CharacterDraftForm() {
 
       <Button
         type="submit"
+        variant="gradient"
         disabled={loading || !selectedMapName}
         size="lg"
         className="w-full"

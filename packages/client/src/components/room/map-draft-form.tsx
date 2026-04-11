@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import type { DraftConfig, MapBanMode } from "@os-drafter/shared";
-import { MAPS } from "@os-drafter/shared";
 import { Button } from "@/components/ui/button";
 import { createRoom, type CreateRoomResponse } from "@/lib/api";
 import { SelectField, NumberField, RoomLinks } from "./form-fields";
+import { MapPickerDialog } from "@/components/home/map-picker-dialog";
 
 const MAP_BAN_MODES: { value: MapBanMode; label: string }[] = [
   { value: "bo1", label: "Best of 1" },
@@ -61,7 +61,7 @@ export function MapDraftForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-5"
+      className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-5 card-glow"
     >
       <h2 className="text-center text-xl font-bold text-primary">
         Map Draft
@@ -74,7 +74,7 @@ export function MapDraftForm() {
         onChange={(v) => setConfig({ ...config, mapBanMode: v as MapBanMode })}
       />
 
-      <MapExclusionPicker
+      <MapPickerDialog
         excludedMaps={config.excludedMaps}
         onChange={(excluded) => setConfig({ ...config, excludedMaps: excluded })}
       />
@@ -118,6 +118,7 @@ export function MapDraftForm() {
 
       <Button
         type="submit"
+        variant="gradient"
         disabled={loading || config.excludedMaps.length !== 3}
         size="lg"
         className="w-full"
@@ -125,59 +126,5 @@ export function MapDraftForm() {
         {loading ? "Creating..." : "Create Room"}
       </Button>
     </form>
-  );
-}
-
-function MapExclusionPicker({
-  excludedMaps,
-  onChange,
-}: {
-  excludedMaps: string[];
-  onChange: (excluded: string[]) => void;
-}) {
-  const activeMaps = MAPS.filter((m) => m.active);
-  const excluded = new Set(excludedMaps);
-
-  const toggle = (mapId: string) => {
-    if (excluded.has(mapId)) {
-      onChange(excludedMaps.filter((id) => id !== mapId));
-    } else if (excluded.size < 3) {
-      onChange([...excludedMaps, mapId]);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-muted-foreground">
-        Exclude Maps ({excluded.size}/3)
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        {activeMaps.map((map) => {
-          const isExcluded = excluded.has(map.id);
-          const isDisabled = !isExcluded && excluded.size >= 3;
-          return (
-            <button
-              key={map.id}
-              type="button"
-              disabled={isDisabled}
-              aria-pressed={isExcluded}
-              onClick={() => toggle(map.id)}
-              className={`rounded-lg border px-3 py-2 text-xs text-left transition-colors ${
-                isExcluded
-                  ? "border-destructive bg-destructive/10 text-destructive line-through"
-                  : "border-border bg-input text-foreground hover:bg-secondary"
-              } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              {map.name}
-            </button>
-          );
-        })}
-      </div>
-      {excluded.size !== 3 && (
-        <p className="text-xs text-muted-foreground">
-          Select exactly 3 maps to exclude
-        </p>
-      )}
-    </div>
   );
 }
