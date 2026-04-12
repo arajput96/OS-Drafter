@@ -17,38 +17,41 @@ export function BanSlot({ characterId, team, isActive }: BanSlotProps) {
   return (
     <div
       className={cn(
-        "relative flex size-10 items-center justify-center rounded-md border",
+        "relative flex h-14 w-full items-center gap-2 rounded-lg border px-2",
         isActive
           ? team === "blue"
             ? "border-team-blue/60 bg-team-blue/10 animate-pulse"
             : "border-team-red/60 bg-team-red/10 animate-pulse"
-          : "border-border/50 bg-secondary/50",
+          : "border-border/40 bg-secondary/30",
       )}
     >
       {character ? (
         <>
-          <Image
-            src={character.icon}
-            alt={character.name}
-            fill
-            sizes="40px"
-            className="rounded-md object-cover grayscale"
-          />
-          <div className="absolute inset-0 flex items-center justify-center bg-destructive/40 rounded-md">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={3}
-              className="size-5 text-destructive"
-            >
-              <line x1="4" y1="4" x2="20" y2="20" />
-              <line x1="20" y1="4" x2="4" y2="20" />
-            </svg>
+          <div className="relative size-10 shrink-0 overflow-hidden rounded-md">
+            <Image
+              src={character.icon}
+              alt={character.name}
+              fill
+              sizes="40px"
+              className="object-cover grayscale"
+            />
+            <div className="absolute bottom-0 right-0 flex size-4 items-center justify-center rounded-tl-sm bg-destructive/80">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={4}
+                className="size-2.5 text-white"
+              >
+                <line x1="4" y1="4" x2="20" y2="20" />
+                <line x1="20" y1="4" x2="4" y2="20" />
+              </svg>
+            </div>
           </div>
+          <span className="text-sm font-medium truncate text-muted-foreground">{character.name}</span>
         </>
       ) : (
-        <span className="text-[10px] text-muted-foreground">BAN</span>
+        <span className="text-xs text-muted-foreground">Ban</span>
       )}
     </div>
   );
