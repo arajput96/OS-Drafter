@@ -41,13 +41,19 @@ export function CharacterDraftPhase({
   const canLock = isMyTurn && selectedId !== null && myTeam !== null;
   const selectedCharacter = selectedId ? characterMap.get(selectedId) : null;
 
-  // Suppress overflow-y-auto during the grid's initial stagger animation so
-  // the scrollbar doesn't briefly appear from transient layout. After the
-  // animation settles, allow scrolling only if content genuinely overflows.
+  // Suppress overflow-y-auto during the first-paint layout so the scrollbar
+  // doesn't briefly appear from transient overflow on hydration. Re-enable
+  // after two animation frames (layout has committed by then).
   const [canScroll, setCanScroll] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setCanScroll(true), 700);
-    return () => clearTimeout(t);
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setCanScroll(true));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
   }, []);
 
   // Check if we already have a pending action (simultaneous mode)
