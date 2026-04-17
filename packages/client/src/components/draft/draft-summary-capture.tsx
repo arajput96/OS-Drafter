@@ -72,8 +72,8 @@ const CharacterSummary = forwardRef<HTMLDivElement, DraftSummaryCaptureProps>(
         )}
 
         <div className="flex w-full gap-6">
-          <TeamColumn team="blue" bans={draft.blueTeamBans} picks={draft.blueTeamPicks} />
-          <TeamColumn team="red" bans={draft.redTeamBans} picks={draft.redTeamPicks} />
+          <TeamColumn team="blue" bans={draft.blueTeamBans} picks={draft.blueTeamPicks} label={room.blueTeamName || "Blue"} />
+          <TeamColumn team="red" bans={draft.redTeamBans} picks={draft.redTeamPicks} label={room.redTeamName || "Red"} />
         </div>
 
         <p className="text-xs text-[#9090a0]/60">OS Drafter</p>
@@ -134,10 +134,12 @@ function TeamColumn({
   team,
   bans,
   picks,
+  label,
 }: {
   team: "blue" | "red";
   bans: (string | null)[];
   picks: (string | null)[];
+  label: string;
 }) {
   const isBlue = team === "blue";
   const teamColor = isBlue ? "#3b82f6" : "#ef4444";
@@ -155,7 +157,7 @@ function TeamColumn({
         className="text-center text-sm font-bold uppercase tracking-wider"
         style={{ color: teamColor }}
       >
-        {isBlue ? "Blue" : "Red"}
+        {label}
       </div>
 
       {/* Bans */}

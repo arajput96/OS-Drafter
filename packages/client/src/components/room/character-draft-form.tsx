@@ -76,7 +76,7 @@ export function CharacterDraftForm() {
   };
 
   if (result) {
-    return <RoomLinks result={result} blueLabel="Blue" redLabel="Red" onReset={handleReset} />;
+    return <RoomLinks result={result} blueLabel={blueTeamName || "Blue"} redLabel={redTeamName || "Red"} onReset={handleReset} />;
   }
 
   return (

@@ -21,8 +21,8 @@ export function WaitingRoom({ room, role, onStart }: WaitingRoomProps) {
     role !== "spectator" && room.blueConnected && room.redConnected;
 
   const isCharacterDraft = room.config.draftType === "character";
-  const blueLabel = isCharacterDraft ? "Blue" : "Side Select";
-  const redLabel = isCharacterDraft ? "Red" : "Map Select";
+  const blueLabel = isCharacterDraft ? (room.blueTeamName || "Blue") : "Side Select";
+  const redLabel = isCharacterDraft ? (room.redTeamName || "Red") : "Map Select";
 
   // Reset starting state if an error occurs (e.g., server rejected the start)
   useEffect(() => {

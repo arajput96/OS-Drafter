@@ -10,3 +10,5 @@ dist/
 PLAN.md
 .vercel
 .claude/
+.mcp.json
+.playwright-mcp/

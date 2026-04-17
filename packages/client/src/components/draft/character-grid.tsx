@@ -85,7 +85,6 @@ export function CharacterGrid({
         {headerText}
       </div>
       <motion.div
-        key={draft.phase}
         className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-7"
         variants={gridContainer}
         initial="hidden"
