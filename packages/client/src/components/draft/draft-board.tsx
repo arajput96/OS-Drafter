@@ -103,19 +103,37 @@ export function DraftBoard({
 
       {/* Header — replaced with "Draft Complete" banner when done */}
       {isComplete ? (
-        <div className="relative flex items-center justify-center px-2 py-3 shrink-0">
-          <h2 className="text-xl font-bold text-primary">Draft Complete</h2>
-          <Button
-            onClick={handleDownload}
-            disabled={downloading}
-            size="sm"
-            variant="outline"
-            className="absolute right-2 gap-2"
-          >
-            <Download className="size-4" />
-            {downloading ? "Saving..." : "Download Results"}
-          </Button>
-        </div>
+        isCharPhase ? (
+          <div className="grid grid-cols-3 items-center px-2 py-3 shrink-0">
+            <h2 className="text-xl font-bold text-primary justify-self-start">Draft Complete</h2>
+            <div className="flex justify-center">
+              {isCharacterDraft && revealedAwakenings && (
+                <AwakeningDisplay awakeningIds={revealedAwakenings} showLabel={false} large />
+              )}
+            </div>
+            <div className="justify-self-end">
+              {isCharacterDraft && draft.config.selectedMapName && (
+                <p className="text-sm text-muted-foreground">
+                  Map: <span className="font-semibold text-foreground">{draft.config.selectedMapName}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="relative flex items-center justify-center px-2 py-3 shrink-0">
+            <h2 className="text-xl font-bold text-primary">Draft Complete</h2>
+            <Button
+              onClick={handleDownload}
+              disabled={downloading}
+              size="sm"
+              variant="outline"
+              className="absolute right-2 gap-2"
+            >
+              <Download className="size-4" />
+              {downloading ? "Saving..." : "Download Results"}
+            </Button>
+          </div>
+        )
       ) : (
         isCharPhase ? (
           /* Compact horizontal top bar for character draft */
@@ -127,6 +145,8 @@ export function DraftBoard({
                 myTeam={myTeam}
                 isCharacterDraft={isCharacterDraft}
                 phase={renderPhase}
+                blueTeamName={room.blueTeamName}
+                redTeamName={room.redTeamName}
               />
             </div>
             <div className="flex flex-col items-center gap-2">
@@ -187,6 +207,11 @@ export function DraftBoard({
             onSelect={isComplete ? undefined : onSelectCharacter}
             onLockIn={isComplete ? undefined : onLockIn}
             onSkipBan={isComplete ? undefined : onSkipBan}
+            isComplete={isComplete}
+            downloading={downloading}
+            onDownload={isComplete ? handleDownload : undefined}
+            blueTeamName={room.blueTeamName}
+            redTeamName={room.redTeamName}
           />
         </div>
       )}
@@ -211,22 +236,27 @@ function TurnIndicator({
   myTeam,
   isCharacterDraft,
   phase,
+  blueTeamName,
+  redTeamName,
 }: {
   currentTurn: "blue" | "red" | "both";
   myTeam: Team | null;
   isCharacterDraft: boolean;
   phase: string;
+  blueTeamName?: string;
+  redTeamName?: string;
 }) {
   const isMyTurn = currentTurn === "both" || currentTurn === myTeam;
 
   if (!myTeam) {
     // Spectator
     const bothLabel = phase === "CHAR_BAN" ? "Both teams banning" : "Both teams picking";
+    const charTeamLabel = currentTurn === "blue" ? (blueTeamName || "Blue") : (redTeamName || "Red");
     const label =
       currentTurn === "both"
         ? bothLabel
         : isCharacterDraft
-          ? `${currentTurn === "blue" ? "Blue" : "Red"}'s turn`
+          ? `${charTeamLabel}'s turn`
           : `${currentTurn === "blue" ? "Side Select" : "Map Select"}'s turn`;
     const spectatorColor =
       currentTurn === "both"

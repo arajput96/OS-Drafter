@@ -1,5 +1,6 @@
 import type { DraftState, Team } from "@os-drafter/shared";
 import { cn } from "@/lib/utils";
+import { getTeamLabel } from "@/lib/team-utils";
 import { BottomPickCard } from "./bottom-pick-card";
 
 interface SideTeamPanelProps {
@@ -7,6 +8,8 @@ interface SideTeamPanelProps {
   draft: DraftState;
   previewId?: string | null;
   className?: string;
+  blueTeamName?: string;
+  redTeamName?: string;
 }
 
 function getActiveSlotInfo(
@@ -27,7 +30,7 @@ function padSlots(arr: (string | null)[], total: number): (string | null)[] {
   return [...arr, ...Array<null>(total - arr.length).fill(null)];
 }
 
-export function SideTeamPanel({ team, draft, previewId, className }: SideTeamPanelProps) {
+export function SideTeamPanel({ team, draft, previewId, className, blueTeamName, redTeamName }: SideTeamPanelProps) {
   const { numBans, numPicks } = draft.config;
   const bans = padSlots(
     team === "blue" ? draft.blueTeamBans : draft.redTeamBans,
@@ -57,7 +60,7 @@ export function SideTeamPanel({ team, draft, previewId, className }: SideTeamPan
           isBlue ? "text-team-blue" : "text-team-red",
         )}
       >
-        {isBlue ? "Blue" : "Red"}
+        {getTeamLabel(team, blueTeamName, redTeamName)}
       </div>
       <div className="flex flex-col gap-1.5">
         {bans.map((id, i) => {
