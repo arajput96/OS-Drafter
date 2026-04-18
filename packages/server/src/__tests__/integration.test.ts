@@ -1197,3 +1197,149 @@ describe("Map Pool Validation", () => {
     expect(res.statusCode).toBe(400);
   });
 });
+
+// ════════════════════════════════════════════════════
+// Suite J: Tentative Broadcast & Room Grace
+// ════════════════════════════════════════════════════
+
+describe("Tentative Broadcast & Room Grace", () => {
+  let server: TestServer;
+  const sockets: TestSocket[] = [];
+
+  // Character draft with a long timer so we can control timing manually.
+  const TENTATIVE_CONFIG: DraftConfig = {
+    ...CHAR_CONFIG,
+    banMode: "staggered",
+    numBans: 1,
+    timerSeconds: 30,
+  };
+
+  beforeAll(async () => {
+    server = await createTestServer();
+  });
+
+  afterEach(async () => {
+    for (const s of sockets) {
+      if (s.connected) s.disconnect();
+    }
+    sockets.length = 0;
+    await delay(100);
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  function client(): TestSocket {
+    const s = createTestClient(server.url);
+    sockets.push(s);
+    return s;
+  }
+
+  it("should broadcast draft:tentative to spectators only — never to teams", async () => {
+    const blue = client();
+    const red = client();
+    const spec = client();
+    await Promise.all([waitForConnect(blue), waitForConnect(red), waitForConnect(spec)]);
+
+    const roomId = await createRoom(blue, TENTATIVE_CONFIG);
+    await joinRed(red, roomId);
+    const specStateP = waitForRoomState(spec);
+    spec.emit("room:join", roomId, "spectator");
+    await specStateP;
+    await startDraft(blue, red);
+
+    let blueReceived = false;
+    let redReceived = false;
+    blue.on("draft:tentative", () => { blueReceived = true; });
+    red.on("draft:tentative", () => { redReceived = true; });
+
+    // Spectator should receive the broadcast
+    const specP = waitForEvent(spec, "draft:tentative");
+    blue.emit("draft:select", characterIds[0]!);
+    const [payload] = await specP;
+
+    expect(payload.team).toBe("blue");
+    expect(payload.characterId).toBe(characterIds[0]);
+
+    // Give any incorrect leakage a chance to arrive before asserting
+    await delay(80);
+    expect(blueReceived).toBe(false);
+    expect(redReceived).toBe(false);
+  });
+
+  it("should catch up a late-joining spectator with in-flight tentative selections", async () => {
+    const blue = client();
+    const red = client();
+    const spec = client();
+    await Promise.all([waitForConnect(blue), waitForConnect(red), waitForConnect(spec)]);
+
+    const roomId = await createRoom(blue, TENTATIVE_CONFIG);
+    await joinRed(red, roomId);
+    await startDraft(blue, red);
+
+    // Blue tentatively selects before any spectator is watching
+    blue.emit("draft:select", characterIds[0]!);
+    await delay(50);
+
+    // Spectator joins — should receive the existing tentative
+    const tentativeP = waitForEvent(spec, "draft:tentative");
+    spec.emit("room:join", roomId, "spectator");
+    const [payload] = await tentativeP;
+
+    expect(payload.team).toBe("blue");
+    expect(payload.characterId).toBe(characterIds[0]);
+  });
+
+  it("should cancel the empty-room grace timer when a client rejoins within the window", async () => {
+    // Widen the grace to give the reconnect time to land deterministically.
+    registry.setGraceMs(500);
+    try {
+      const blue = client();
+      await waitForConnect(blue);
+
+      const roomId = await createRoom(blue);
+      expect(registry.get(roomId)).toBeDefined();
+
+      blue.disconnect();
+      // Briefly wait so the disconnect is processed and grace timer is scheduled
+      await delay(50);
+      expect(registry.get(roomId)).toBeDefined();
+
+      // Rejoin before the 500ms grace expires
+      const blue2 = client();
+      await waitForConnect(blue2);
+      const stateP = waitForRoomState(blue2);
+      blue2.emit("room:join", roomId, "blue");
+      await stateP;
+
+      // Wait past the original grace window — room must still exist
+      await delay(600);
+      expect(registry.get(roomId)).toBeDefined();
+    } finally {
+      registry.setGraceMs(50);
+    }
+  });
+
+  it("should accept lock-ins arriving during the timer grace window", async () => {
+    const blue = client();
+    const red = client();
+    await Promise.all([waitForConnect(blue), waitForConnect(red)]);
+
+    const roomId = await createRoom(blue, { ...TENTATIVE_CONFIG, timerSeconds: 1 });
+    await joinRed(red, roomId);
+    await startDraft(blue, red);
+
+    // First step is blue's ban. Wait until after the visible countdown hits 0
+    // (~1000ms) but well before the 1s grace expires (~2000ms), then lock in.
+    await delay(1200);
+
+    const statePromise = waitForDraftState(blue);
+    blue.emit("draft:select", characterIds[0]!);
+    blue.emit("draft:lock");
+    const state = await statePromise;
+
+    // Our selection should have been committed — not a random auto-pick from expiry
+    expect(state.blueTeamBans).toContain(characterIds[0]);
+  }, 10000);
+});

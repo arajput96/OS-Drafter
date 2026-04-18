@@ -58,6 +58,12 @@ export class DraftTimer {
     }
   }
 
+  /**
+   * Returns the visible-countdown value. Note: `0` does NOT imply the timer
+   * has expired — `onExpire` only fires after the grace window (see
+   * `EXPIRY_GRACE_MS`), so the timer can sit at 0 for up to a second while
+   * last-moment lock-ins are still accepted.
+   */
   getRemaining(): number {
     return this.remaining;
   }

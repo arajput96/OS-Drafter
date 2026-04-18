@@ -152,6 +152,10 @@ export function pickTwoAwakenings(
   throw new Error("No valid awakening pair exists in the pool");
 }
 
+/** Awakenings that are excluded from the random pool by default at room
+ *  creation. Users can opt them back in via the picker. */
+export const DEFAULT_EXCLUDED_AWAKENINGS: readonly string[] = ["team-player"];
+
 /** IDs of awakenings currently legal in drafts. */
 export const CURRENT_AWAKENING_POOL: readonly string[] = [
   "among-titans",
@@ -189,3 +193,11 @@ export const CURRENT_AWAKENING_POOL: readonly string[] = [
   "timeless-creator",
   "twin-drive",
 ];
+
+// Fail fast if a default-excluded id is ever renamed or removed.
+const _awakeningIds = new Set(AWAKENINGS.map((a) => a.id));
+for (const id of DEFAULT_EXCLUDED_AWAKENINGS) {
+  if (!_awakeningIds.has(id)) {
+    throw new Error(`DEFAULT_EXCLUDED_AWAKENINGS references unknown id "${id}"`);
+  }
+}
