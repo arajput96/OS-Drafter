@@ -24,7 +24,8 @@ export function CharacterDraftForm() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CreateRoomResponse | null>(null);
   const [awakeningMode, setAwakeningMode] = useState<"random" | "choose">("random");
-  const [excludedAwakenings, setExcludedAwakenings] = useState<string[]>([]);
+  // Default: exclude Team Player. Users can opt back in via the awakening picker.
+  const [excludedAwakenings, setExcludedAwakenings] = useState<string[]>(["team-player"]);
   const [chosenAwakenings, setChosenAwakenings] = useState<[string, string] | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {

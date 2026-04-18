@@ -13,7 +13,7 @@ interface OverlayClientProps {
   version?: "v1" | "v2";
 }
 
-export function OverlayClient({ roomId, darkBg, version = "v1" }: OverlayClientProps) {
+export function OverlayClient({ roomId, darkBg, version = "v2" }: OverlayClientProps) {
   useSocket(roomId, "spectator");
 
   // Force dark background for overlay pages — must use !important to override

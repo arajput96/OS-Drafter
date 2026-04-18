@@ -81,7 +81,25 @@ export function BottomPickCard({
             {/* Vignette overlay — darkens edges, brightens center */}
             <div className="absolute inset-0 shadow-[inset_0_0_30px_12px_rgba(0,0,0,0.7)]" />
             {slotType === "ban" && (
-              <div className="absolute inset-0 bg-black/30" />
+              <>
+                <div className="absolute inset-0 bg-black/30" />
+                {/* Team-colored diagonal slash — matches OBS overlay ban treatment */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                >
+                  <div
+                    className={cn(
+                      "h-[3px] w-[130%]",
+                      isBlue ? "bg-team-blue" : "bg-team-red",
+                    )}
+                    style={{
+                      transform: "rotate(-18deg)",
+                      boxShadow: "0 0 8px rgba(0,0,0,0.9)",
+                    }}
+                  />
+                </div>
+              </>
             )}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1.5">
               <span className={cn(

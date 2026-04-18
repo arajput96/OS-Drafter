@@ -10,5 +10,5 @@ export default async function OverlayPage({
   const { id } = await params;
   const { bg, v } = await searchParams;
 
-  return <OverlayClient roomId={id} darkBg={bg === "dark"} version={v === "2" ? "v2" : "v1"} />;
+  return <OverlayClient roomId={id} darkBg={bg === "dark"} version={v === "1" ? "v1" : "v2"} />;
 }
