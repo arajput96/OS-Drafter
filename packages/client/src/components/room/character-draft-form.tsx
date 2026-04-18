@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { DraftConfig } from "@os-drafter/shared";
-import { MAPS } from "@os-drafter/shared";
+import { MAPS, DEFAULT_EXCLUDED_AWAKENINGS } from "@os-drafter/shared";
 import { Button } from "@/components/ui/button";
 import { createRoom, type CreateRoomResponse } from "@/lib/api";
 import { SelectField, NumberField, RoomLinks } from "./form-fields";
@@ -24,7 +24,11 @@ export function CharacterDraftForm() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CreateRoomResponse | null>(null);
   const [awakeningMode, setAwakeningMode] = useState<"random" | "choose">("random");
-  const [excludedAwakenings, setExcludedAwakenings] = useState<string[]>([]);
+  // Default exclusions come from shared so the id list is validated against the
+  // current awakening pool at build time.
+  const [excludedAwakenings, setExcludedAwakenings] = useState<string[]>([
+    ...DEFAULT_EXCLUDED_AWAKENINGS,
+  ]);
   const [chosenAwakenings, setChosenAwakenings] = useState<[string, string] | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {

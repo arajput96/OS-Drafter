@@ -36,6 +36,9 @@ export function registerRoomHandlers(io: TypedServer, socket: TypedSocket): void
       return;
     }
 
+    // Abort any pending delete — a (re)join means the room is still in use.
+    registry.cancelScheduledDelete(roomId);
+
     // If already in a room, leave it first
     if (socket.data.roomId) {
       leaveCurrentRoom(io, socket);
@@ -64,6 +67,18 @@ export function registerRoomHandlers(io: TypedServer, socket: TypedSocket): void
       socket.emit("draft:phase-change", draftView.phase);
     }
 
+    // Catch up spectators on any in-flight tentative selections
+    if (role === "spectator") {
+      const blueTentative = room.getSelection("blue");
+      const redTentative = room.getSelection("red");
+      if (blueTentative) {
+        socket.emit("draft:tentative", { team: "blue", characterId: blueTentative });
+      }
+      if (redTentative) {
+        socket.emit("draft:tentative", { team: "red", characterId: redTentative });
+      }
+    }
+
     // Broadcast updated room state to everyone
     room.broadcastRoomState(io);
   });
@@ -86,9 +101,11 @@ function leaveCurrentRoom(io: TypedServer, socket: TypedSocket): void {
   socket.data.roomId = null;
   socket.data.role = null;
 
-  // If room is completely empty, clean it up
+  // If the room is empty, schedule a deferred cleanup. This survives refreshes
+  // and Strict-Mode remounts that momentarily drop the last socket — a rejoin
+  // within the grace window cancels the timer.
   if (room.getTotalSockets() === 0) {
-    registry.delete(roomId);
+    registry.scheduleDelete(roomId);
     return;
   }
 

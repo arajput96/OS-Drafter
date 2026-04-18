@@ -5,13 +5,15 @@ import { useSocket } from "@/hooks/use-socket";
 import { useDraftStore } from "@/store/draft-store";
 import { MapDraftOverlay } from "./map-draft-overlay";
 import { CharacterDraftOverlay } from "./character-draft-overlay";
+import { CharacterDraftOverlayV2 } from "./character-draft-overlay-v2";
 
 interface OverlayClientProps {
   roomId: string;
   darkBg?: boolean;
+  version?: "v1" | "v2";
 }
 
-export function OverlayClient({ roomId, darkBg }: OverlayClientProps) {
+export function OverlayClient({ roomId, darkBg, version = "v2" }: OverlayClientProps) {
   useSocket(roomId, "spectator");
 
   // Force dark background for overlay pages — must use !important to override
@@ -30,6 +32,8 @@ export function OverlayClient({ roomId, darkBg }: OverlayClientProps) {
   const connected = useDraftStore((s) => s.connected);
   const room = useDraftStore((s) => s.room);
   const draft = useDraftStore((s) => s.draft);
+  const timerRemaining = useDraftStore((s) => s.timerRemaining);
+  const tentative = useDraftStore((s) => s.tentative);
 
   if (!connected || !room) {
     return (
@@ -55,6 +59,13 @@ export function OverlayClient({ roomId, darkBg }: OverlayClientProps) {
     <div className={`overlay-banner ${darkBg ? "bg-[#111]" : ""}`}>
       {isMapDraft ? (
         <MapDraftOverlay draft={draft} room={room} />
+      ) : version === "v2" ? (
+        <CharacterDraftOverlayV2
+          draft={draft}
+          room={room}
+          timerRemaining={timerRemaining}
+          tentative={tentative}
+        />
       ) : (
         <CharacterDraftOverlay draft={draft} room={room} />
       )}

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { DraftState, RoomRole, RoomState } from "@os-drafter/shared";
+import type { DraftState, RoomRole, RoomState, Team } from "@os-drafter/shared";
 
 interface DraftStore {
   connected: boolean;
@@ -8,6 +8,8 @@ interface DraftStore {
   draft: DraftState | null;
   timerRemaining: number;
   selectedId: string | null;
+  /** Spectator-only view of what each team is tentatively hovering. Empty for team/player roles. */
+  tentative: { blue: string | null; red: string | null };
   error: string | null;
 
   setConnected: (connected: boolean) => void;
@@ -16,6 +18,7 @@ interface DraftStore {
   setDraft: (draft: DraftState) => void;
   setTimer: (remaining: number) => void;
   setSelected: (id: string | null) => void;
+  setTentative: (team: Team, id: string | null) => void;
   setError: (error: string | null) => void;
   reset: () => void;
 }
@@ -27,6 +30,7 @@ const initialState = {
   draft: null as DraftState | null,
   timerRemaining: 0,
   selectedId: null as string | null,
+  tentative: { blue: null as string | null, red: null as string | null },
   error: null as string | null,
 };
 
@@ -39,10 +43,15 @@ export const useDraftStore = create<DraftStore>((set) => ({
     set((state) => {
       // Clear tentative selection when the turn advances (e.g. timer expiry)
       const turnAdvanced = state.draft && draft && state.draft.turnIndex !== draft.turnIndex;
-      return { draft, ...(turnAdvanced ? { selectedId: null } : {}) };
+      return {
+        draft,
+        ...(turnAdvanced ? { selectedId: null, tentative: { blue: null, red: null } } : {}),
+      };
     }),
   setTimer: (timerRemaining) => set({ timerRemaining }),
   setSelected: (selectedId) => set({ selectedId }),
+  setTentative: (team, id) =>
+    set((state) => ({ tentative: { ...state.tentative, [team]: id } })),
   setError: (error) => set({ error }),
   reset: () => set(initialState),
 }));

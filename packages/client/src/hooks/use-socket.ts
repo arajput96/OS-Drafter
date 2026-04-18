@@ -49,6 +49,10 @@ export function useSocket(roomId: string, role: RoomRole) {
       useDraftStore.getState().setTimer(remaining);
     });
 
+    socket.on("draft:tentative", ({ team, characterId }) => {
+      useDraftStore.getState().setTentative(team, characterId);
+    });
+
     socket.on("error", (message) => {
       useDraftStore.getState().setError(message);
     });

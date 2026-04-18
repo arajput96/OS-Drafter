@@ -172,5 +172,10 @@ export interface ServerToClientEvents {
   "draft:timer": (remaining: number) => void;
   "draft:phase-change": (phase: DraftPhase) => void;
   "draft:action": (action: DraftAction) => void;
+  /**
+   * Tentative (hovered) selection broadcast. Emitted ONLY to spectator sockets —
+   * team sockets receive nothing so players cannot see opponents' hovers.
+   */
+  "draft:tentative": (payload: { team: Team; characterId: string | null }) => void;
   error: (message: string) => void;
 }
