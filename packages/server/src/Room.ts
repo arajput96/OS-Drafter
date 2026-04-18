@@ -239,6 +239,8 @@ export class Room {
         if (afterLockIndex !== prevIndex) {
           // Tentative selection already advanced the step — skip expireTimer
           this.clearSelections();
+          this.broadcastTentative(io, "blue", null);
+          this.broadcastTentative(io, "red", null);
           this.broadcastDraftState(io);
 
           if (this.machine.isComplete()) {
@@ -259,6 +261,8 @@ export class Room {
 
         if (result.ok) {
           this.clearSelections();
+          this.broadcastTentative(io, "blue", null);
+          this.broadcastTentative(io, "red", null);
           this.broadcastDraftState(io);
 
           if (this.machine.getState().turnIndex !== prevIndex) {
@@ -317,6 +321,13 @@ export class Room {
     const state = this.machine?.getState();
     if (state) {
       io.to(this.roomId).emit("draft:phase-change", state.phase);
+    }
+  }
+
+  /** Push a team's tentative selection to spectator sockets only (never to the teams). */
+  broadcastTentative(io: TypedServer, team: Team, characterId: string | null): void {
+    for (const socketId of this.spectatorSockets) {
+      io.to(socketId).emit("draft:tentative", { team, characterId });
     }
   }
 

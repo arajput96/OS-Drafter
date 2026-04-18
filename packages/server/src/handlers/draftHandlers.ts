@@ -97,6 +97,7 @@ export function registerDraftHandlers(io: TypedServer, socket: TypedSocket): voi
 
     // Store tentative selection (does NOT touch DraftMachine)
     room.setSelection(team, characterId);
+    room.broadcastTentative(io, team, characterId);
   });
 
   socket.on("draft:lock", () => {
@@ -143,6 +144,7 @@ export function registerDraftHandlers(io: TypedServer, socket: TypedSocket): voi
     }
 
     room.setSelection(team, null);
+    room.broadcastTentative(io, team, null);
     io.to(room.roomId).emit("draft:action", action);
 
     afterAction(io, room, prevIndex);

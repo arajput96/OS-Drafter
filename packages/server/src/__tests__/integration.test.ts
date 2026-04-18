@@ -12,6 +12,9 @@ import {
 } from "./helpers.js";
 import { registry } from "../RoomRegistry.js";
 
+// Shrink the empty-room grace period so cleanup assertions don't wait 30s.
+registry.setGraceMs(50);
+
 // ── Shared test fixtures ──
 
 const activeMaps = MAPS.filter((m) => m.active);
@@ -298,6 +301,7 @@ describe("Room Management", () => {
     expect(registry.get(roomId)).toBeDefined();
 
     blue.disconnect();
+    // Wait past the (shortened) empty-room grace period before asserting cleanup.
     await delay(200);
 
     expect(registry.get(roomId)).toBeUndefined();
